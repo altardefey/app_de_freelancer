@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    display: 'none',
     alignItems: 'center',
     paddingHorizontal: 18,
     paddingBottom: 18,

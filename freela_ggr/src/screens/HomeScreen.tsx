@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -223,6 +224,7 @@ function Pill({
 }
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
   const [role, setRole] = useState<Role | null>(null);
   const [loginRole, setLoginRole] = useState<Role | null>(null);
   const [email, setEmail] = useState("");
@@ -295,16 +297,23 @@ export default function HomeScreen() {
         contentContainerStyle={styles.loginPage}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.loginShell}>
-          <View style={styles.loginIntro}>
+        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbMint]} />
+        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbBlue]} />
+        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbPeach]} />
+        <View style={[styles.loginLayout, width < 760 && styles.loginLayoutMobile]}>
+          <View style={[styles.loginIntro, width < 760 && styles.loginIntroMobile]}>
             <Logo />
             <Text style={styles.eyebrow}>PLATAFORMA DE SERVIÇOS</Text>
-            <Text style={styles.loginTitle}>Encontre quem resolve.</Text>
-            <Text style={styles.loginSubtitle}>
+            <Text style={[styles.loginTitle, width < 760 && styles.loginTitleMobile]}>Encontre quem resolve.</Text>
+            <Text style={[styles.loginSubtitle, width < 760 && styles.loginSubtitleMobile]}>
               Conecte clientes a profissionais confiáveis para fazer acontecer.
             </Text>
+            <View style={styles.loginTrust}>
+              <Feather name="shield" size={16} color="#4F7D6B" />
+              <Text style={styles.loginTrustText}>Profissionais avaliados pela comunidade</Text>
+            </View>
           </View>
-          <View style={styles.loginCard}>
+          <View style={[styles.loginCard, width < 760 && styles.loginCardMobile]}>
             {!loginRole ? (
               <>
                 <Text style={styles.cardTitle}>Como você vai usar?</Text>
