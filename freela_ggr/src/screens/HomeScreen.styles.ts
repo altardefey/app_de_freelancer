@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 const colors = {
   sand: '#F1ECE2',
@@ -23,12 +23,13 @@ const shadow = {
 export const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.sand },
   content: { padding: 20, paddingBottom: 48, maxWidth: 760, width: '100%', alignSelf: 'center' },
-  header: { height: 72, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.glass, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { height: 72, marginTop: Platform.OS === 'web' ? 52 : 0, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.glass, borderBottomWidth: 1, borderBottomColor: colors.border },
   logo: { flexDirection: 'row', alignItems: 'center' },
   logoMark: { backgroundColor: colors.coral, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   logoGlyph: { color: colors.white, fontSize: 24, fontWeight: '800', lineHeight: 28 },
   logoText: { color: colors.ink, fontSize: 22, fontWeight: '800', marginLeft: 8, letterSpacing: -0.6 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  logoutButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 10, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.55)' },
   headerRole: { color: '#277B8A', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   headerRoleGreen: { color: '#3E7D53', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   logout: { color: colors.muted, fontSize: 13, fontWeight: '700' },
@@ -50,7 +51,11 @@ export const styles = StyleSheet.create({
   pillText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
   pillTextActive: { color: colors.ink },
   section: { marginTop: 28 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '800', marginBottom: 13 },
+  arrowGroup: { flexDirection: 'row', gap: 8, marginBottom: 13 },
+  arrowButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lime, borderWidth: 1, borderColor: colors.border },
+  arrowButtonDisabled: { opacity: 0.35 },
   serviceRailCard: { backgroundColor: colors.ink, borderRadius: 26, padding: 18, width: 190, minHeight: 176, marginRight: 12, ...shadow },
   railCategory: { color: colors.lime, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   railTitle: { color: colors.white, fontSize: 16, fontWeight: '800', marginTop: 17 },
@@ -123,6 +128,9 @@ export const styles = StyleSheet.create({
   modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '800', marginTop: 9 },
   modalProvider: { color: colors.muted, fontSize: 13, marginTop: 4, marginBottom: 18 },
   messageInput: { minHeight: 100, paddingTop: 13, textAlignVertical: 'top', borderRadius: 24 },
+  attachButton: { minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.glass, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 16, marginTop: 12 },
+  attachText: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+  attachmentPreview: { width: 76, height: 76, borderRadius: 16, marginTop: 12 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 9, marginTop: 16 },
   cancelButton: { paddingHorizontal: 16, paddingVertical: 13 },
   cancelText: { color: colors.muted, fontSize: 13, fontWeight: '800' },
