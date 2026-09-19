@@ -1,6 +1,6 @@
 import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   Image,
@@ -14,6 +14,13 @@ import {
   View,
 } from "react-native";
 
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { styles } from "./HomeScreen.styles";
 
 type Role = "cliente" | "profissional";
@@ -202,6 +209,69 @@ function Logo() {
     </View>
   );
 }
+
+function LoginActionButton({
+  children,
+  variant,
+  icon,
+  onPress,
+  actionDelay = 0,
+}: {
+  children: ReactNode;
+  variant: "lime" | "dark";
+  icon?: "user" | "briefcase";
+  onPress: () => void;
+  actionDelay?: number;
+}) {
+  const pulse = useSharedValue(0);
+  const handlePress = () => {
+    pulse.value = 0;
+    pulse.value = withSequence(
+      withTiming(0.15, { duration: 0 }),
+      withTiming(1, { duration: 650 }, () => {
+      pulse.value = 0;
+      }),
+    );
+    if (actionDelay > 0) {
+      setTimeout(onPress, actionDelay);
+    } else {
+      onPress();
+    }
+  };
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 0.15, 1], [0, 1, 0]),
+    transform: [{ scale: interpolate(pulse.value, [0, 0.15, 1], [0.95, 1, 1.45]) }],
+  }));
+
+  return (
+    <View style={styles.loginButtonWrap}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.loginButtonRing,
+          variant === "dark" && styles.loginButtonRingDark,
+          ringStyle,
+        ]}
+      />
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [
+          variant === "lime" ? styles.primaryButton : styles.secondaryButton,
+          pressed && styles.loginButtonPressed,
+        ]}
+      >
+        {icon ? (
+          <View style={styles.choiceIcon}>
+            <Feather name={icon} size={18} color="#18181B" />
+          </View>
+        ) : null}
+        {children}
+        <Text style={variant === "lime" ? styles.buttonArrow : styles.buttonArrowDark}>→</Text>
+      </Pressable>
+    </View>
+  );
+}
 function Pill({
   label,
   active,
@@ -320,28 +390,22 @@ export default function HomeScreen() {
                 <Text style={styles.loginChoiceSubtitle}>
                   Escolha seu perfil para continuar.
                 </Text>
-                <Pressable
-                  style={styles.primaryButton}
+                <LoginActionButton
+                  variant="lime"
+                  icon="user"
+                  actionDelay={220}
                   onPress={() => setLoginRole("cliente")}
                 >
-                  <View style={styles.choiceIcon}>
-                    <Feather name="search" size={18} color="#18181B" />
-                  </View>
                   <Text style={styles.primaryButtonText}>Sou cliente</Text>
-                  <Text style={styles.buttonArrow}>→</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryButton}
+                </LoginActionButton>
+                <LoginActionButton
+                  variant="dark"
+                  icon="briefcase"
+                  actionDelay={220}
                   onPress={() => setLoginRole("profissional")}
                 >
-                  <View style={styles.choiceIcon}>
-                    <Feather name="briefcase" size={18} color="#18181B" />
-                  </View>
-                  <Text style={styles.secondaryButtonText}>
-                    Sou profissional
-                  </Text>
-                  <Text style={styles.buttonArrowDark}>→</Text>
-                </Pressable>
+                  <Text style={styles.secondaryButtonText}>Sou profissional</Text>
+                </LoginActionButton>
               </>
             ) : (
               <>
@@ -376,13 +440,9 @@ export default function HomeScreen() {
                   style={styles.input}
                   secureTextEntry
                 />
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={() => login(loginRole)}
-                >
+                <LoginActionButton variant="lime" onPress={() => login(loginRole)}>
                   <Text style={styles.primaryButtonText}>Entrar</Text>
-                  <Text style={styles.buttonArrow}>→</Text>
-                </Pressable>
+                </LoginActionButton>
                 <Text style={styles.demoText}>
                   Use qualquer e-mail e senha para visualizar a demonstração.
                 </Text>
