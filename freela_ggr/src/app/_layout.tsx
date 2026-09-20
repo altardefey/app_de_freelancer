@@ -10,15 +10,33 @@ if (Platform.OS !== 'web') {
 }
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const isFontTimeout = (message: string, filename = '') =>
+    message.includes('timeout exceeded') || filename.includes('fontfaceobserver');
+
   window.addEventListener('unhandledrejection', (event) => {
     const message =
       event.reason instanceof Error ? event.reason.message : String(event.reason ?? '');
 
-    if (message.includes('timeout exceeded')) {
+    if (isFontTimeout(message)) {
       event.preventDefault();
       console.warn('Ignorando timeout de fonte no web:', message);
     }
   });
+
+  window.addEventListener(
+    'error',
+    (event) => {
+      const message = event.message || String(event.error?.message ?? '');
+      const filename = event.filename || '';
+
+      if (isFontTimeout(message, filename)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.warn('Ignorando timeout de fonte no web:', message);
+      }
+    },
+    true,
+  );
 }
 
 export default function TabLayout() {

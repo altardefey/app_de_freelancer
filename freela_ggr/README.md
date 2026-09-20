@@ -1,56 +1,186 @@
-# Welcome to your Expo app 👋
+# freela
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo em desenvolvimento para conectar clientes a profissionais de serviços locais. A ideia é permitir que clientes encontrem profissionais por categoria e localização, solicitem orçamentos e avaliem serviços concluídos. Profissionais, por sua vez, acompanham pedidos recebidos e atualizam o status dos orçamentos.
 
-## Get started
+> Status: WIP. O projeto ainda não está pronto para produção. Há telas funcionais, integração inicial com Supabase e fluxo de cadastro/login em evolução, mas ainda existem partes temporárias e regras de negócio a validar.
 
-1. Install dependencies
+## O que já existe
 
-   ```bash
-   npm install
-   ```
+- Tela inicial com escolha entre cliente e profissional.
+- Cadastro em etapas com:
+  - tipo de perfil;
+  - localização;
+  - serviços de interesse/oferecidos;
+  - contato, e-mail e senha;
+  - checklist visual de senha segura.
+- Login com Supabase Auth.
+- Catálogo de serviços vindo do banco.
+- Solicitação de orçamento salva no Supabase.
+- Painel do profissional com orçamentos do banco.
+- Lista de serviços concluídos e avaliação apenas para itens em `completed_jobs`.
+- Layout responsivo para web/mobile via Expo e React Native.
 
-2. Start the app
+## Ainda falta
 
-   ```bash
-   npx expo start
-   ```
+- Refinar políticas do Supabase para regras reais de cliente/profissional.
+- Melhorar fluxo de confirmação de e-mail em desenvolvimento.
+- Criar tela completa de criação/edição de serviços para profissionais.
+- Relacionar orçamentos ao profissional correto.
+- Remover telas antigas ou experimentais que não fazem parte do fluxo final.
+- Adicionar testes automatizados.
+- Revisar acessibilidade, estados vazios e mensagens de erro.
+- Preparar build/deploy.
 
-In the output, you'll find options to open the app in a
+## Stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Expo 57
+- React 19
+- React Native 0.86
+- Expo Router
+- TypeScript
+- Supabase Auth + Database
+- React Native Reanimated
+- Expo Blur / Glass effects
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Como rodar localmente
 
-## Get a fresh project
+Pré-requisitos:
 
-When you're ready, run:
+- Node.js instalado
+- npm instalado
+- projeto Supabase criado
+
+Instale as dependências:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Rode o app:
 
-### Other setup steps
+```bash
+npm run web
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Ou, se quiser escolher a plataforma pelo Expo:
 
-## Learn more
+```bash
+npm start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Durante o desenvolvimento web, o app costuma abrir em:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```text
+http://localhost:8081
+```
 
-## Join the community
+## Configuração do Supabase
 
-Join our community of developers creating universal apps.
+O cliente Supabase fica em:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```text
+src/lib/supabase.ts
+```
+
+Para desenvolvimento, o projeto atualmente possui valores fallback no código. O ideal é configurar variáveis de ambiente:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Depois, rode o schema no SQL Editor do Supabase:
+
+```text
+supabase/schema.sql
+```
+
+Esse schema cria:
+
+- `profiles`
+- `services`
+- `budgets`
+- `completed_jobs`
+- políticas RLS iniciais
+- trigger para criar perfil automaticamente a partir do Supabase Auth
+- dados iniciais de serviços
+
+### Observação sobre cadastro por e-mail
+
+Em desenvolvimento, o Supabase pode bloquear novos cadastros por limite de envio de e-mails (`email rate limit exceeded`). Isso acontece antes de criar o usuário em `Authentication > Users`.
+
+Para continuar testando, existem duas opções:
+
+- aguardar o limite temporário liberar;
+- desativar temporariamente a confirmação por e-mail em `Authentication > Sign In / Providers > Email`.
+
+## Scripts úteis
+
+```bash
+npm start
+```
+
+Inicia o Expo.
+
+```bash
+npm run web
+```
+
+Inicia o app no navegador.
+
+```bash
+npm run android
+```
+
+Inicia o app no Android.
+
+```bash
+npm run ios
+```
+
+Inicia o app no iOS.
+
+```bash
+npx tsc --noEmit
+```
+
+Valida TypeScript sem gerar build.
+
+## Estrutura principal
+
+```text
+src/
+  app/                 Rotas do Expo Router
+  components/          Componentes reutilizáveis
+  context/             Estado de sessão/autenticação
+  data/                Integrações, catálogos e dados auxiliares
+  lib/                 Clientes externos, como Supabase
+  navigation/          Roteamento por perfil
+  screens/             Telas principais do app
+  types/               Tipos compartilhados
+  utils/               Funções utilitárias
+
+supabase/
+  schema.sql           Estrutura inicial do banco
+```
+
+## Fluxo atual
+
+1. Usuário escolhe se é cliente ou profissional.
+2. Usuário faz login ou abre o cadastro.
+3. Cadastro coleta perfil, localização, serviços e credenciais.
+4. Supabase Auth cria o usuário.
+5. Perfil é salvo em `profiles`.
+6. Cliente vê serviços do banco e pode solicitar orçamento.
+7. Profissional vê orçamentos salvos no banco.
+
+## Notas de desenvolvimento
+
+- O projeto é WIP e pode ter mudanças grandes de estrutura.
+- Algumas telas herdadas do template/experimentos ainda podem existir.
+- O app prioriza web durante o desenvolvimento, mas a base é Expo/React Native.
+- Se uma tela parecer travada por erro de fonte no Expo Web, recarregue a página. Há tratamento no `_layout`, mas o overlay do Expo pode manter estado antigo até reload.
+
+## Licença
+
+Veja o arquivo `LICENSE`.
