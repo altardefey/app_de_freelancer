@@ -4,10 +4,23 @@ export const locationStyles = StyleSheet.create({
   stack: {
     gap: 10,
   },
+  compactStack: {
+    gap: 8,
+    marginTop: 16,
+  },
   compactRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 16,
+  },
+  cepInput: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  loadingText: {
+    color: "#A1A1AA",
+    fontSize: 12,
+    fontWeight: "600",
   },
   field: {
     minHeight: 48,

@@ -1,0 +1,142 @@
+import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { BlurView } from "expo-blur";
+
+import { LoginActionButton } from "../components/LoginActionButton";
+import { LoginOrbs } from "../components/LoginOrbs";
+import { Logo } from "../components/Logo";
+import { useSession } from "../context/SessionContext";
+import type { Role } from "../types/app";
+import { styles } from "./HomeScreen.styles";
+
+export function LoginScreen() {
+  const { width } = useWindowDimensions();
+  const { login, openRegister } = useSession();
+  const [loginRole, setLoginRole] = useState<Role | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  function handleLogin() {
+    if (!loginRole) return;
+    if (!email.trim() || !password.trim()) {
+      Alert.alert(
+        "Campos obrigatórios",
+        "Informe seu e-mail e sua senha para continuar.",
+      );
+      return;
+    }
+    login(loginRole);
+  }
+
+  return (
+    <View style={styles.loginShell}>
+      <LoginOrbs />
+      <ScrollView
+        contentContainerStyle={styles.loginPage}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[styles.loginLayout, width < 760 && styles.loginLayoutMobile]}>
+          <View style={styles.glassContainerLeft}>
+            <BlurView intensity={40} tint="dark" style={styles.glassBlur}>
+              <View style={[styles.loginIntro, width < 760 && styles.loginIntroMobile]}>
+                <Logo />
+                <Text style={styles.eyebrow}>PLATAFORMA DE SERVIÇOS</Text>
+                <Text style={[styles.loginTitle, width < 760 && styles.loginTitleMobile]}>
+                  Encontre quem resolve.
+                </Text>
+                <Text style={[styles.loginSubtitle, width < 760 && styles.loginSubtitleMobile]}>
+                  Conectando clientes a profissionais confiáveis para fazer acontecer.
+                </Text>
+                <View style={styles.loginTrust}>
+                  <Feather name="shield" size={16} color="#4F7D6B" />
+                  <Text style={styles.loginTrustText}>
+                    Profissionais avaliados pela comunidade
+                  </Text>
+                </View>
+              </View>
+            </BlurView>
+          </View>
+
+          <View style={[styles.loginCard, width < 760 && styles.loginCardMobile]}>
+            {!loginRole ? (
+              <>
+                <Text style={styles.cardTitle}>Como você vai usar?</Text>
+                <Text style={styles.loginChoiceSubtitle}>
+                  Escolha seu perfil para continuar.
+                </Text>
+                <LoginActionButton
+                  variant="lime"
+                  icon="user"
+                  actionDelay={220}
+                  onPress={() => setLoginRole("cliente")}
+                >
+                  <Text style={styles.primaryButtonText}>Sou cliente</Text>
+                </LoginActionButton>
+                <LoginActionButton
+                  variant="dark"
+                  icon="briefcase"
+                  actionDelay={220}
+                  onPress={() => setLoginRole("profissional")}
+                >
+                  <Text style={styles.secondaryButtonText}>Sou profissional</Text>
+                </LoginActionButton>
+                <Pressable onPress={openRegister}>
+                  <Text style={styles.registerPrompt}>
+                    não é membro?{" "}
+                    <Text style={styles.registerLink}>registre-se</Text>
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Pressable style={styles.backChoice} onPress={() => setLoginRole(null)}>
+                  <Feather name="arrow-left" size={16} color="#71717A" />
+                  <Text style={styles.backChoiceText}>Trocar perfil</Text>
+                </Pressable>
+                <Text style={styles.cardTitle}>
+                  {loginRole === "cliente"
+                    ? "Acesse como cliente"
+                    : "Acesse como profissional"}
+                </Text>
+                <Text style={styles.label}>E-mail</Text>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="seu@email.com"
+                  placeholderTextColor="#71717A"
+                  style={styles.input}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <Text style={styles.label}>Senha</Text>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Digite sua senha"
+                  placeholderTextColor="#71717A"
+                  style={styles.input}
+                  secureTextEntry
+                />
+                <LoginActionButton variant="lime" onPress={handleLogin}>
+                  <Text style={styles.primaryButtonText}>Entrar</Text>
+                </LoginActionButton>
+                <Text style={styles.demoText}>
+                  Use qualquer e-mail e senha para visualizar a demonstração.
+                </Text>
+              </>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}

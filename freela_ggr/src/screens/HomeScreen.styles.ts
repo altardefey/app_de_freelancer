@@ -663,4 +663,34 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
+  reportButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#3F3F46",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  completedCard: {
+    backgroundColor: "#27272A",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+  },
+  starsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 12,
+  },
+  ratingHint: {
+    color: "#A1A1AA",
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: "600",
+  },
 });

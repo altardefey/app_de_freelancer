@@ -25,13 +25,16 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { LocationFields, type LocationValue } from "../components/LocationFields";
+import { AnimatedCheckbox } from "../components/AnimatedCheckbox";
+import { LocationFields } from "../components/LocationFields";
 import { LoginOrbs } from "../components/LoginOrbs";
+import { useSession } from "../context/SessionContext";
 import {
   findForbiddenService,
   OTHER_SERVICE_LABEL,
   SERVICE_OPTIONS,
 } from "../data/serviceOptions";
+import { emptyLocation } from "../types/app";
 import { normalize } from "../utils/searchTools";
 import { registerStyles as styles } from "./RegisterOnboarding.styles";
 
@@ -49,13 +52,6 @@ const SPRING_CONFIG = {
   restDisplacementThreshold: 0.01,
   restSpeedThreshold: 2,
   reduceMotion: ReduceMotion.System,
-};
-
-export type RegisterPayload = {
-  role: "cliente" | "profissional";
-  location: LocationValue;
-  services: string[];
-  whatsapp: string;
 };
 
 const FLOATING_ICONS: {
@@ -166,21 +162,12 @@ function PaginatorDot({
   return <Animated.View style={[styles.dot, style]} />;
 }
 
-export function RegisterOnboarding({
-  onCancel,
-  onComplete,
-}: {
-  onCancel: () => void;
-  onComplete: (payload: RegisterPayload) => void;
-}) {
+export function RegisterOnboarding() {
+  const { closeRegister, completeRegister } = useSession();
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(0);
   const [role, setRole] = useState<"cliente" | "profissional" | null>(null);
-  const [location, setLocation] = useState<LocationValue>({
-    uf: "",
-    stateName: "",
-    city: "",
-  });
+  const [location, setLocation] = useState(emptyLocation);
   const [serviceQuery, setServiceQuery] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState("");
@@ -200,7 +187,7 @@ export function RegisterOnboarding({
 
   const canContinue = () => {
     if (index === 0) return Boolean(role);
-    if (index === 1) return Boolean(location.uf && location.city);
+    if (index === 1) return Boolean(location.uf && location.city && location.neighborhood);
     if (index === 2) {
       const hasCatalog = selectedServices.some((item) => item !== OTHER_SERVICE_LABEL);
       const wantsOther = selectedServices.includes(OTHER_SERVICE_LABEL);
@@ -245,11 +232,9 @@ export function RegisterOnboarding({
       .concat(
         selectedServices.includes(OTHER_SERVICE_LABEL) ? [customService.trim()] : [],
       );
-    onComplete({
+    completeRegister({
       role,
       location,
-      services,
-      whatsapp: digitsOnly(whatsapp),
     });
   }
 
@@ -270,7 +255,7 @@ export function RegisterOnboarding({
     1: {
       eyebrow: "LOCAL",
       title: "Onde você mora?",
-      subtitle: "Selecione o estado e a cidade para encontrar gente perto de você.",
+      subtitle: "Informe o CEP ou escolha estado, cidade e bairro.",
     },
     2: {
       eyebrow: "SERVIÇOS",
@@ -295,7 +280,7 @@ export function RegisterOnboarding({
       {FLOATING_ICONS.map((icon) => (
         <FloatingIcon key={icon.name} {...icon} />
       ))}
-      <Pressable style={styles.close} onPress={onCancel}>
+      <Pressable style={styles.close} onPress={closeRegister}>
         <Feather name="arrow-left" size={16} color="#A1A1AA" />
         <Text style={styles.closeText}>Voltar ao login</Text>
       </Pressable>
@@ -351,7 +336,9 @@ export function RegisterOnboarding({
               </View>
             ) : null}
 
-            {index === 1 ? <LocationFields value={location} onChange={setLocation} /> : null}
+            {index === 1 ? (
+              <LocationFields showStreet value={location} onChange={setLocation} />
+            ) : null}
 
             {index === 2 ? (
               <>
@@ -367,37 +354,19 @@ export function RegisterOnboarding({
                 </View>
                 <ScrollView style={{ maxHeight: 210 }} keyboardShouldPersistTaps="handled">
                   <View style={styles.chips}>
-                    {visibleServices.map((item) => {
-                      const active = selectedServices.includes(item);
-                      return (
-                        <Pressable
-                          key={item}
-                          style={[styles.chip, active && styles.chipActive]}
-                          onPress={() => toggleService(item)}
-                        >
-                          <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                            {item}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                    <Pressable
-                      style={[
-                        styles.chip,
-                        selectedServices.includes(OTHER_SERVICE_LABEL) && styles.chipActive,
-                      ]}
+                    {visibleServices.map((item) => (
+                      <AnimatedCheckbox
+                        key={item}
+                        label={item}
+                        checked={selectedServices.includes(item)}
+                        onPress={() => toggleService(item)}
+                      />
+                    ))}
+                    <AnimatedCheckbox
+                      label={OTHER_SERVICE_LABEL}
+                      checked={selectedServices.includes(OTHER_SERVICE_LABEL)}
                       onPress={() => toggleService(OTHER_SERVICE_LABEL)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          selectedServices.includes(OTHER_SERVICE_LABEL) &&
-                            styles.chipTextActive,
-                        ]}
-                      >
-                        {OTHER_SERVICE_LABEL}
-                      </Text>
-                    </Pressable>
+                    />
                   </View>
                 </ScrollView>
                 {selectedServices.includes(OTHER_SERVICE_LABEL) ? (
