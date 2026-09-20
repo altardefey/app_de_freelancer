@@ -1,3 +1,5 @@
+import Feather from "@expo/vector-icons/Feather";
+import { BlurView } from "expo-blur";
 import { useState } from "react";
 import {
   Alert,
@@ -8,8 +10,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
-import { BlurView } from "expo-blur";
 
 import { LoginActionButton } from "../components/LoginActionButton";
 import { LoginOrbs } from "../components/LoginOrbs";
@@ -91,8 +91,8 @@ export function LoginScreen() {
                 </LoginActionButton>
                 <Pressable onPress={openRegister}>
                   <Text style={styles.registerPrompt}>
-                    não é membro?{" "}
-                    <Text style={styles.registerLink}>registre-se</Text>
+                    Não é membro?{" "}
+                    <Text style={styles.registerLink}>Registre-se!</Text>
                   </Text>
                 </Pressable>
               </>
@@ -130,7 +130,7 @@ export function LoginScreen() {
                   <Text style={styles.primaryButtonText}>Entrar</Text>
                 </LoginActionButton>
                 <Text style={styles.demoText}>
-                  Use qualquer e-mail e senha para visualizar a demonstração.
+                  Use um e-mail e senha válidos.
                 </Text>
               </>
             )}
