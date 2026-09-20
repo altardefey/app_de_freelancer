@@ -22,6 +22,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { BlurView } from "expo-blur";
+
+import { LocationFields, type LocationValue } from "../components/LocationFields";
+import { LoginOrbs } from "../components/LoginOrbs";
+import { RegisterOnboarding } from "./RegisterOnboarding";
 import { styles } from "./HomeScreen.styles";
 
 type Role = "cliente" | "profissional";
@@ -34,6 +38,8 @@ type Service = {
   price: string;
   rating: string;
   description: string;
+  uf: string;
+  city: string;
   trending?: boolean;
   recent?: boolean;
 };
@@ -55,6 +61,8 @@ const services: Service[] = [
     price: "R$ 180",
     rating: "4,9",
     description: "Paredes, tetos e acabamento para ambientes residenciais.",
+    uf: "SP",
+    city: "São Paulo",
     trending: true,
     recent: true,
   },
@@ -66,6 +74,8 @@ const services: Service[] = [
     price: "R$ 120",
     rating: "4,8",
     description: "Instalações, reparos e revisão elétrica com segurança.",
+    uf: "RJ",
+    city: "Rio de Janeiro",
     trending: true,
   },
   {
@@ -76,6 +86,8 @@ const services: Service[] = [
     price: "R$ 220",
     rating: "4,7",
     description: "Limpeza detalhada para entregar seu espaço pronto.",
+    uf: "MG",
+    city: "Belo Horizonte",
     recent: true,
   },
   {
@@ -86,6 +98,8 @@ const services: Service[] = [
     price: "R$ 95",
     rating: "4,9",
     description: "Vazamentos, torneiras, registros e tubulações.",
+    uf: "SP",
+    city: "Campinas",
     trending: true,
     recent: true,
   },
@@ -97,6 +111,8 @@ const services: Service[] = [
     price: "R$ 650",
     rating: "4,8",
     description: "Projeto e montagem de móveis sob medida.",
+    uf: "PR",
+    city: "Curitiba",
     recent: true,
   },
   {
@@ -107,6 +123,8 @@ const services: Service[] = [
     price: "R$ 150",
     rating: "4,6",
     description: "Higienização e manutenção preventiva.",
+    uf: "BA",
+    city: "Salvador",
     trending: true,
   },
 ];
@@ -301,10 +319,14 @@ function Pill({
   );
 }
 
+const emptyLocation: LocationValue = { uf: "", stateName: "", city: "" };
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const [role, setRole] = useState<Role | null>(null);
   const [loginRole, setLoginRole] = useState<Role | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [location, setLocation] = useState<LocationValue>(emptyLocation);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [query, setQuery] = useState("");
@@ -323,14 +345,19 @@ export default function HomeScreen() {
     return services.filter((service) => {
       const matchesCategory =
         category === "Todos" || service.category === category;
+      const matchesState = !location.uf || service.uf === location.uf;
+      const matchesCity = !location.city || service.city === location.city;
       const searchable = normalize(
         `${service.title} ${service.category} ${service.provider} ${service.description}`,
       );
       return (
-        matchesCategory && (!searchTerm || searchable.includes(searchTerm))
+        matchesCategory &&
+        matchesState &&
+        matchesCity &&
+        (!searchTerm || searchable.includes(searchTerm))
       );
     });
-  }, [category, query, suggestion]);
+  }, [category, location.city, location.uf, query, suggestion]);
 
   function login(selectedRole: Role) {
     if (!email.trim() || !password.trim()) {
@@ -373,15 +400,28 @@ export default function HomeScreen() {
     if (!result.canceled) setAttachmentUri(result.assets[0].uri);
   }
 
+  if (isRegistering) {
+    return (
+      <RegisterOnboarding
+        onCancel={() => setIsRegistering(false)}
+        onComplete={(payload) => {
+          setLocation(payload.location);
+          setIsRegistering(false);
+          setLoginRole(null);
+          setRole(payload.role);
+        }}
+      />
+    );
+  }
+
   if (!role)
     return (
-      <ScrollView
-        contentContainerStyle={styles.loginPage}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbMint]} />
-        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbBlue]} />
-        <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbPeach]} />
+      <View style={styles.loginShell}>
+        <LoginOrbs />
+        <ScrollView
+          contentContainerStyle={styles.loginPage}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={[styles.loginLayout, width < 760 && styles.loginLayoutMobile]}>
           
           {/* LADO ESQUERDO COM O EFEITO VIDRO (EXPO BLUR) */}
@@ -430,6 +470,12 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.secondaryButtonText}>Sou profissional</Text>
                 </LoginActionButton>
+                <Pressable onPress={() => setIsRegistering(true)}>
+                  <Text style={styles.registerPrompt}>
+                    não é membro?{" "}
+                    <Text style={styles.registerLink}>registre-se</Text>
+                  </Text>
+                </Pressable>
               </>
             ) : (
               <>
@@ -475,11 +521,17 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+      </View>
     );
 
   if (role === "cliente") {
-    const trending = services.filter((service) => service.trending);
-    const recent = services.filter((service) => service.recent);
+    const locatedServices = services.filter(
+      (service) =>
+        (!location.uf || service.uf === location.uf) &&
+        (!location.city || service.city === location.city),
+    );
+    const trending = locatedServices.filter((service) => service.trending);
+    const recent = locatedServices.filter((service) => service.recent);
     return (
       <View style={styles.page}>
         <View style={styles.header}>
@@ -501,6 +553,20 @@ export default function HomeScreen() {
           <Text style={styles.pageSubtitle}>
             Pesquise um serviço ou explore as opções mais procuradas.
           </Text>
+          <LocationFields compact value={location} onChange={setLocation} />
+          {location.city ? (
+            <Text style={styles.locationHint}>
+              Mostrando serviços em {location.city}, {location.uf}
+            </Text>
+          ) : location.uf ? (
+            <Text style={styles.locationHint}>
+              Mostrando serviços em {location.stateName}
+            </Text>
+          ) : (
+            <Text style={styles.locationHint}>
+              Escolha estado e cidade para filtrar os serviços da sua região.
+            </Text>
+          )}
           <View style={styles.searchBox}>
             <Feather
               name="search"

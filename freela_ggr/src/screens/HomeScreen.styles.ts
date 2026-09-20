@@ -71,39 +71,18 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+  loginShell: {
+    flex: 1,
+    backgroundColor: "#09090B",
+    overflow: "hidden",
+  },
   loginPage: {
     flexGrow: 1,
-    backgroundColor: "#09090B",
+    backgroundColor: "transparent",
     padding: 24,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-  },
-  loginOrb: {
-    position: "absolute",
-    borderRadius: 999,
-    opacity: 0.15,
-  },
-  loginOrbMint: {
-    width: 300,
-    height: 300,
-    backgroundColor: "#4ADE80",
-    top: -50,
-    left: -50,
-  },
-  loginOrbBlue: {
-    width: 350,
-    height: 350,
-    backgroundColor: "#38BDF8",
-    bottom: -100,
-    right: -50,
-  },
-  loginOrbPeach: {
-    width: 250,
-    height: 250,
-    backgroundColor: "#FB923C",
-    top: "40%",
-    left: "30%",
   },
   loginLayout: {
     flexDirection: "row",
@@ -300,6 +279,22 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 16,
     lineHeight: 16,
+  },
+  registerPrompt: {
+    textAlign: "center",
+    color: "#71717A",
+    fontSize: 13,
+    marginTop: 18,
+  },
+  registerLink: {
+    color: "#CCFF00",
+    fontWeight: "800",
+  },
+  locationHint: {
+    color: "#71717A",
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: "600",
   },
   overline: {
     color: "#38BDF8",
