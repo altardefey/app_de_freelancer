@@ -1,5 +1,5 @@
-import HomeScreen from '../screens/HomeScreen';
+import { AppRouter } from "../navigation/AppRouter";
 
 export default function Page() {
-  return <HomeScreen />;
+  return <AppRouter />;
 }

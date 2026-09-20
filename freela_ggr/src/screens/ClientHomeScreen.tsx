@@ -18,7 +18,7 @@ import { ReportServiceButton } from "../components/ReportServiceButton";
 import { ServiceRating } from "../components/ServiceRating";
 import { useSession } from "../context/SessionContext";
 import { buildCatalogDictionary, serviceCategories } from "../data/catalog";
-import { listCompletedJobs, listServices, updateJobRating } from "../data/remote";
+import { createBudget, listCompletedJobs, listServices, updateJobRating } from "../data/remote";
 import type { CompletedJob, Service } from "../types/app";
 import { distance, normalize } from "../utils/searchTools";
 import { styles } from "./HomeScreen.styles";
@@ -66,6 +66,8 @@ export function ClientHomeScreen() {
   const [category, setCategory] = useState("Todos");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [attachmentUri, setAttachmentUri] = useState<string | null>(null);
+  const [requestDetails, setRequestDetails] = useState("");
+  const [sendingRequest, setSendingRequest] = useState(false);
   const [catalogServices, setCatalogServices] = useState<Service[]>([]);
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
   const catalogDictionary = useMemo(
@@ -133,7 +135,25 @@ export function ClientHomeScreen() {
 
   function openService(service: Service) {
     setAttachmentUri(null);
+    setRequestDetails("");
     setSelectedService(service);
+  }
+
+  async function sendServiceRequest() {
+    if (!selectedService) return;
+
+    setSendingRequest(true);
+    await createBudget({
+      client: "Cliente do app",
+      service: selectedService.title,
+      value: selectedService.price,
+      status: "solicitado",
+    });
+    setSendingRequest(false);
+    setAttachmentUri(null);
+    setRequestDetails("");
+    setSelectedService(null);
+    Alert.alert("Solicitação enviada", "O pedido foi salvo no Supabase e enviado ao profissional.");
   }
 
   async function attachImage() {
@@ -267,6 +287,8 @@ export function ClientHomeScreen() {
               {selectedService?.provider} · a partir de {selectedService?.price}
             </Text>
             <TextInput
+              value={requestDetails}
+              onChangeText={setRequestDetails}
               multiline
               placeholder="Conte um pouco sobre o que você precisa"
               placeholderTextColor="#71717A"
@@ -293,13 +315,12 @@ export function ClientHomeScreen() {
               </Pressable>
               <Pressable
                 style={styles.primaryButtonSmall}
-                onPress={() => {
-                  setAttachmentUri(null);
-                  setSelectedService(null);
-                  Alert.alert("Solicitação enviada", "O profissional recebeu seu pedido.");
-                }}
+                disabled={sendingRequest}
+                onPress={sendServiceRequest}
               >
-                <Text style={styles.primaryButtonText}>Enviar pedido</Text>
+                <Text style={styles.primaryButtonText}>
+                  {sendingRequest ? "Enviando..." : "Enviar pedido"}
+                </Text>
               </Pressable>
             </View>
           </View>

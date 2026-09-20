@@ -172,6 +172,9 @@ export function RegisterOnboarding() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
   const animatedIndex = useSharedValue(0);
   const steppedAhead = useSharedValue(0);
   const cardWidth = Math.min(width * 0.8, 440);
@@ -197,7 +200,11 @@ export function RegisterOnboarding() {
       return hasCatalog;
     }
     const phone = digitsOnly(whatsapp);
-    return phone.length === 10 || phone.length === 11;
+    return (
+      (phone.length === 10 || phone.length === 11) &&
+      email.includes("@") &&
+      password.length >= 6
+    );
   };
 
   const mainButtonStyle = useAnimatedStyle(() => ({
@@ -217,7 +224,7 @@ export function RegisterOnboarding() {
     steppedAhead.value = withSpring(next === 0 ? 0 : 1, SPRING_CONFIG);
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!canContinue()) {
       Alert.alert("Quase lá", "Complete esta etapa para continuar.");
       return;
@@ -232,10 +239,24 @@ export function RegisterOnboarding() {
       .concat(
         selectedServices.includes(OTHER_SERVICE_LABEL) ? [customService.trim()] : [],
       );
-    completeRegister({
+
+    setSaving(true);
+    const success = await completeRegister({
       role,
       location,
+      email,
+      password,
+      whatsapp,
+      services,
     });
+    setSaving(false);
+
+    if (!success) {
+      Alert.alert(
+        "Cadastro não concluído",
+        "Confira os dados ou tente usar outro e-mail.",
+      );
+    }
   }
 
   function toggleService(label: string) {
@@ -267,8 +288,8 @@ export function RegisterOnboarding() {
     },
     3: {
       eyebrow: "CONTATO",
-      title: "Qual seu WhatsApp?",
-      subtitle: "Usamos este número para conectar você com segurança.",
+      title: "Como você vai acessar?",
+      subtitle: "Informe WhatsApp, e-mail e senha para criar sua conta.",
     },
   } as const;
 
@@ -389,14 +410,33 @@ export function RegisterOnboarding() {
             ) : null}
 
             {index === 3 ? (
-              <TextInput
-                value={whatsapp}
-                onChangeText={(value) => setWhatsapp(formatWhatsapp(value))}
-                placeholder="(11) 99999-9999"
-                placeholderTextColor="#71717A"
-                keyboardType="phone-pad"
-                style={styles.input}
-              />
+              <>
+                <TextInput
+                  value={whatsapp}
+                  onChangeText={(value) => setWhatsapp(formatWhatsapp(value))}
+                  placeholder="WhatsApp: (11) 99999-9999"
+                  placeholderTextColor="#71717A"
+                  keyboardType="phone-pad"
+                  style={styles.input}
+                />
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="E-mail"
+                  placeholderTextColor="#71717A"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={[styles.input, styles.stackedInput]}
+                />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Senha com pelo menos 6 caracteres"
+                  placeholderTextColor="#71717A"
+                  secureTextEntry
+                  style={[styles.input, styles.stackedInput]}
+                />
+              </>
             ) : null}
           </View>
         </View>
@@ -434,7 +474,7 @@ export function RegisterOnboarding() {
                 </Animated.View>
               ) : null}
               <Text style={styles.mainButtonText}>
-                {index >= STEP_COUNT - 1 ? "Finalizar" : "Continuar"}
+                {index >= STEP_COUNT - 1 ? (saving ? "Salvando..." : "Finalizar") : "Continuar"}
               </Text>
             </Pressable>
           </Animated.View>

@@ -171,6 +171,9 @@ export const registerStyles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.4,
   },
+  stackedInput: {
+    marginTop: 10,
+  },
   paginator: {
     flexDirection: "row",
     alignItems: "center",

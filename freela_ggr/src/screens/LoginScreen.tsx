@@ -20,12 +20,13 @@ import { styles } from "./HomeScreen.styles";
 
 export function LoginScreen() {
   const { width } = useWindowDimensions();
-  const { login, openRegister } = useSession();
+  const { login, loading, openRegister } = useSession();
   const [loginRole, setLoginRole] = useState<Role | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!loginRole) return;
     if (!email.trim() || !password.trim()) {
       Alert.alert(
@@ -34,7 +35,29 @@ export function LoginScreen() {
       );
       return;
     }
-    login(loginRole);
+
+    setSubmitting(true);
+    const success = await login({ role: loginRole, email, password });
+    setSubmitting(false);
+
+    if (!success) {
+      Alert.alert(
+        "Não foi possível entrar",
+        "Confira o e-mail, a senha e se o cadastro já foi confirmado.",
+      );
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loginShell}>
+        <LoginOrbs />
+        <View style={styles.loadingScreen}>
+          <Logo />
+          <Text style={styles.demoText}>Carregando sessão...</Text>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -79,7 +102,7 @@ export function LoginScreen() {
                   actionDelay={220}
                   onPress={() => setLoginRole("cliente")}
                 >
-                  <Text style={styles.primaryButtonText}>Sou cliente</Text>
+                  <Text style={styles.loginPrimaryButtonText}>Sou cliente</Text>
                 </LoginActionButton>
                 <LoginActionButton
                   variant="dark"
@@ -87,7 +110,7 @@ export function LoginScreen() {
                   actionDelay={220}
                   onPress={() => setLoginRole("profissional")}
                 >
-                  <Text style={styles.secondaryButtonText}>Sou profissional</Text>
+                  <Text style={styles.loginSecondaryButtonText}>Sou profissional</Text>
                 </LoginActionButton>
                 <Pressable onPress={openRegister}>
                   <Text style={styles.registerPrompt}>
@@ -127,7 +150,9 @@ export function LoginScreen() {
                   secureTextEntry
                 />
                 <LoginActionButton variant="lime" onPress={handleLogin}>
-                  <Text style={styles.primaryButtonText}>Entrar</Text>
+                  <Text style={styles.loginPrimaryButtonText}>
+                    {submitting ? "Entrando..." : "Entrar"}
+                  </Text>
                 </LoginActionButton>
                 <Text style={styles.demoText}>
                   Use um e-mail e senha válidos.

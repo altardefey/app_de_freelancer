@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import Animated, {
   interpolate,
@@ -58,17 +58,34 @@ export function LoginActionButton({
       <Pressable
         onPress={handlePress}
         style={({ pressed }) => [
-          variant === "lime" ? styles.primaryButton : styles.secondaryButton,
+          styles.loginLiquidButton,
+          variant === "lime" ? styles.loginLiquidButtonLight : styles.loginLiquidButtonDark,
           pressed && styles.loginButtonPressed,
         ]}
       >
-        {icon ? (
-          <View style={styles.choiceIcon}>
-            <Feather name={icon} size={18} color="#18181B" />
+        <View pointerEvents="none" style={styles.loginButtonDepth} />
+        <View pointerEvents="none" style={styles.loginButtonDiagonalGlow} />
+        <View pointerEvents="none" style={styles.loginButtonInnerStroke} />
+        <View style={styles.loginButtonContent}>
+          {icon ? (
+            <View style={styles.choiceIcon}>
+              <Feather name={icon} size={18} color="#18181B" />
+            </View>
+          ) : null}
+          <View style={styles.loginButtonTextSlot}>{children}</View>
+          <View
+            style={[
+              styles.loginButtonIcon,
+              variant === "dark" && styles.loginButtonIconDark,
+            ]}
+          >
+            <Feather
+              name="chevron-right"
+              size={19}
+              color={variant === "dark" ? "#18181B" : "#FFFDF7"}
+            />
           </View>
-        ) : null}
-        {children}
-        <Text style={variant === "lime" ? styles.buttonArrow : styles.buttonArrowDark}>→</Text>
+        </View>
       </Pressable>
     </View>
   );
