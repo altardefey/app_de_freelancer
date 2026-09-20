@@ -1,4 +1,4 @@
-# freela
+# FREELA
 
 Aplicativo em desenvolvimento para conectar clientes a profissionais de serviços locais. A ideia é permitir que clientes encontrem profissionais por categoria e localização, solicitem orçamentos e avaliem serviços concluídos. Profissionais, por sua vez, acompanham pedidos recebidos e atualizam o status dos orçamentos.
 
