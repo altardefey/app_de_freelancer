@@ -17,8 +17,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+<<<<<<< HEAD
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.freela_ggr"
+=======
+      "predictiveBackGestureEnabled": false
+>>>>>>> origin/main
     },
     "web": {
       "output": "static",

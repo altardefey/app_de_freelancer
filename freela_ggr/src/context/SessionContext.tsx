@@ -21,11 +21,14 @@ type RegisterResult = {
   pendingConfirmation?: boolean;
 };
 
+<<<<<<< HEAD
 type LoginResult = {
   success: boolean;
   message?: string;
 };
 
+=======
+>>>>>>> origin/main
 type SessionContextValue = {
   role: Role | null;
   authScreen: AuthScreen;
@@ -33,7 +36,11 @@ type SessionContextValue = {
   user: User | null;
   loading: boolean;
   setLocation: (next: LocationValue) => void;
+<<<<<<< HEAD
   login: (payload: { role: Role; email: string; password: string }) => Promise<LoginResult>;
+=======
+  login: (payload: { role: Role; email: string; password: string }) => Promise<boolean>;
+>>>>>>> origin/main
   logout: () => Promise<void>;
   openRegister: () => void;
   closeRegister: () => void;
@@ -93,6 +100,7 @@ async function loadProfile(userId: string) {
 function authErrorMessage(error: { message: string; code?: string; status?: number }) {
   const normalized = error.message.toLowerCase();
 
+<<<<<<< HEAD
   if (
     error.code === "invalid_credentials" ||
     normalized.includes("invalid login credentials")
@@ -100,6 +108,8 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
     return "E-mail ou senha inválidos. Confira seus dados e tente novamente.";
   }
 
+=======
+>>>>>>> origin/main
   if (normalized.includes("already") || normalized.includes("registered")) {
     return "Esse e-mail já está cadastrado. Tente entrar pelo login.";
   }
@@ -208,6 +218,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           password,
         });
 
+<<<<<<< HEAD
         if (error) {
           return {
             success: false,
@@ -251,6 +262,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setAuthScreen("login");
 
         return { success: true };
+=======
+        if (error) return false;
+
+        setUser(data.user);
+        setRole(selectedRole);
+        setAuthScreen("login");
+
+        if (data.user) {
+          const profile = await loadProfile(data.user.id);
+          if (profile?.role) setRole(profile.role);
+          if (profile) setLocation(profileToLocation(profile));
+        }
+
+        return true;
+>>>>>>> origin/main
       },
       logout: async () => {
         await supabase.auth.signOut();

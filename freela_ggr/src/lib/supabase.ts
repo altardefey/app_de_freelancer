@@ -22,9 +22,17 @@ const authStorage =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+<<<<<<< HEAD
     storage: AsyncStorage,
+=======
+    storage: authStorage,
+>>>>>>> origin/main
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> origin/main
