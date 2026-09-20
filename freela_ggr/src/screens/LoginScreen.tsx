@@ -2,7 +2,6 @@ import Feather from "@expo/vector-icons/Feather";
 import { BlurView } from "expo-blur";
 import { useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -18,21 +17,32 @@ import { useSession } from "../context/SessionContext";
 import type { Role } from "../types/app";
 import { styles } from "./HomeScreen.styles";
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function LoginScreen() {
   const { width } = useWindowDimensions();
   const { login, loading, openRegister } = useSession();
   const [loginRole, setLoginRole] = useState<Role | null>(null);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleLogin() {
     if (!loginRole) return;
-    if (!email.trim() || !password.trim()) {
-      Alert.alert(
-        "Campos obrigatórios",
-        "Informe seu e-mail e sua senha para continuar.",
-      );
+    setFormError("");
+
+    if (!isValidEmail(email)) {
+      setEmailError("Insira um e-mail válido.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setPasswordError("Informe sua senha.");
       return;
     }
 
@@ -41,10 +51,7 @@ export function LoginScreen() {
     setSubmitting(false);
 
     if (!success) {
-      Alert.alert(
-        "Não foi possível entrar",
-        "Confira o e-mail, a senha e se o cadastro já foi confirmado.",
-      );
+      setFormError("Não foi possível entrar. Confira o e-mail, a senha e se o cadastro já foi confirmado.");
     }
   }
 
@@ -133,22 +140,33 @@ export function LoginScreen() {
                 <Text style={styles.label}>E-mail</Text>
                 <TextInput
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(value) => {
+                    setEmail(value);
+                    if (emailError) setEmailError("");
+                    if (formError) setFormError("");
+                  }}
                   placeholder="seu@email.com"
                   placeholderTextColor="#71717A"
-                  style={styles.input}
+                  style={[styles.input, emailError ? styles.inputError : null]}
                   autoCapitalize="none"
                   keyboardType="email-address"
                 />
+                {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
                 <Text style={styles.label}>Senha</Text>
                 <TextInput
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(value) => {
+                    setPassword(value);
+                    if (passwordError) setPasswordError("");
+                    if (formError) setFormError("");
+                  }}
                   placeholder="Digite sua senha"
                   placeholderTextColor="#71717A"
-                  style={styles.input}
+                  style={[styles.input, passwordError ? styles.inputError : null]}
                   secureTextEntry
                 />
+                {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
+                {formError ? <Text style={styles.formError}>{formError}</Text> : null}
                 <LoginActionButton variant="lime" onPress={handleLogin}>
                   <Text style={styles.loginPrimaryButtonText}>
                     {submitting ? "Entrando..." : "Entrar"}

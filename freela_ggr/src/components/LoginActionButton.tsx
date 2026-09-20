@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { Platform, Pressable, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import Animated, {
   interpolate,
@@ -63,8 +64,36 @@ export function LoginActionButton({
           pressed && styles.loginButtonPressed,
         ]}
       >
+        <BlurView
+          pointerEvents="none"
+          intensity={variant === "lime" ? 58 : 46}
+          tint="dark"
+          style={styles.loginButtonGlassBlur}
+        />
         <View pointerEvents="none" style={styles.loginButtonDepth} />
-        <View pointerEvents="none" style={styles.loginButtonDiagonalGlow} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.loginButtonDiagonalGlow,
+            Platform.OS === "web"
+              ? {
+                  backgroundColor: "transparent",
+                  backgroundImage:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 18%, rgba(255,255,255,0.28) 44%, rgba(255,255,255,0.24) 58%, rgba(255,255,255,0.06) 78%, transparent 100%)",
+                  filter: "blur(7px)",
+                }
+              : null,
+          ]}
+        />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.loginButtonDiagonalFeather,
+            Platform.OS === "web" ? { filter: "blur(10px)" } : null,
+          ]}
+        />
+        <View pointerEvents="none" style={styles.loginButtonTopGlow} />
+        <View pointerEvents="none" style={styles.loginButtonBottomShade} />
         <View pointerEvents="none" style={styles.loginButtonInnerStroke} />
         <View style={styles.loginButtonContent}>
           {icon ? (
