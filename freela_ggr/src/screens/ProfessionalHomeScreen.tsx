@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 
 import { Logo } from "../components/Logo";
 import { useSession } from "../context/SessionContext";
-import { initialBudgets } from "../data/catalog";
+import { listBudgets, updateBudgetStatus } from "../data/remote";
 import type { Budget, BudgetStatus } from "../types/app";
 import { styles } from "./HomeScreen.styles";
 
@@ -27,7 +27,18 @@ function Pill({
 export function ProfessionalHomeScreen() {
   const { logout } = useSession();
   const [budgetFilter, setBudgetFilter] = useState<"todos" | BudgetStatus>("todos");
-  const [budgets, setBudgets] = useState(initialBudgets);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    listBudgets().then((items) => {
+      if (active) setBudgets(items);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const visibleBudgets = budgets.filter(
     (budget) => budgetFilter === "todos" || budget.status === budgetFilter,
   );
@@ -37,10 +48,11 @@ export function ProfessionalHomeScreen() {
     realizado: budgets.filter((budget) => budget.status === "realizado").length,
   };
 
-  function updateBudget(id: string, status: BudgetStatus) {
+  async function updateBudget(id: string, status: BudgetStatus) {
     setBudgets((current) =>
       current.map((budget) => (budget.id === id ? { ...budget, status } : budget)),
     );
+    await updateBudgetStatus(id, status);
   }
 
   return (
@@ -65,7 +77,7 @@ export function ProfessionalHomeScreen() {
           <Metric label="Solicitados" value={counts.solicitado} tone="blue" />
           <Metric label="Pendentes" value={counts.pendente} tone="orange" />
           <Metric label="Realizados" value={counts.realizado} tone="green" />
-          <Metric label="Este mês" value="R$ 1.840" tone="dark" wide />
+          <Metric label="Este mês" value="R$ 0" tone="dark" wide />
         </View>
         <Pressable
           style={styles.greenButton}
@@ -92,9 +104,16 @@ export function ProfessionalHomeScreen() {
             ),
           )}
         </ScrollView>
-        {visibleBudgets.map((budget) => (
-          <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} />
-        ))}
+        {visibleBudgets.length ? (
+          visibleBudgets.map((budget) => (
+            <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} />
+          ))
+        ) : (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Nenhum orçamento encontrado</Text>
+            <Text style={styles.emptyText}>Os pedidos do banco aparecerão aqui.</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

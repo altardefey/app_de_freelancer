@@ -1,4 +1,3 @@
-import { fallbackBudgets, fallbackCompletedJobs, fallbackServices } from "./localFallback";
 import type { Budget, BudgetStatus, CompletedJob, Service } from "../types/app";
 import { supabase } from "../lib/supabase";
 
@@ -115,11 +114,11 @@ export async function listServices(): Promise<Service[]> {
 
   if (error) {
     if (!isMissingTable(error)) console.warn("Erro ao listar serviços:", error.message);
-    return fallbackServices;
+    return [];
   }
 
   const items = (data ?? []).map((item) => mapService(item as ServiceRow));
-  return items.length ? items : fallbackServices;
+  return items;
 }
 
 export async function listBudgets(): Promise<Budget[]> {
@@ -130,11 +129,11 @@ export async function listBudgets(): Promise<Budget[]> {
 
   if (error) {
     if (!isMissingTable(error)) console.warn("Erro ao listar orçamentos:", error.message);
-    return fallbackBudgets;
+    return [];
   }
 
   const items = (data ?? []).map((item) => mapBudget(item as BudgetRow));
-  return items.length ? items : fallbackBudgets;
+  return items;
 }
 
 export async function listCompletedJobs(): Promise<CompletedJob[]> {
@@ -145,11 +144,11 @@ export async function listCompletedJobs(): Promise<CompletedJob[]> {
 
   if (error) {
     if (!isMissingTable(error)) console.warn("Erro ao listar serviços concluídos:", error.message);
-    return fallbackCompletedJobs;
+    return [];
   }
 
   const items = (data ?? []).map((item) => mapCompletedJob(item as CompletedJobRow));
-  return items.length ? items : fallbackCompletedJobs;
+  return items;
 }
 
 export async function createBudget(

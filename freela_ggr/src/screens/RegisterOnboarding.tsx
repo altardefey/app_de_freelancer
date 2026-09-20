@@ -1,11 +1,12 @@
 import Feather from "@expo/vector-icons/Feather";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
+  type StyleProp,
   Text,
   TextInput,
+  type ViewStyle,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -19,6 +20,7 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
@@ -43,6 +45,7 @@ const DOT_SIZE = 10;
 const GAP = DOT_SIZE * 2;
 const PROGRESS_SIZE = DOT_SIZE * 2.6;
 const LEFT_SPACE = -(PROGRESS_SIZE - DOT_SIZE) / 2;
+const APP_GREEN = "#CCFF00";
 
 const SPRING_CONFIG = {
   mass: 1,
@@ -67,6 +70,65 @@ const FLOATING_ICONS: {
   { name: "search", y: 0.7, side: "right", offset: 20, delay: 160 },
   { name: "home", y: 0.46, side: "right", offset: 8, delay: 400 },
 ];
+
+const PASSWORD_RULES = [
+  {
+    key: "length",
+    label: "Pelo menos 8 caracteres",
+    test: (value: string) => value.length >= 8,
+  },
+  {
+    key: "case",
+    label: "Letras maiúsculas e minúsculas",
+    test: (value: string) => /[a-z]/.test(value) && /[A-Z]/.test(value),
+  },
+  {
+    key: "number",
+    label: "Pelo menos 1 número",
+    test: (value: string) => /\d/.test(value),
+  },
+  {
+    key: "symbol",
+    label: "Pelo menos 1 símbolo",
+    test: (value: string) => /[^A-Za-z0-9]/.test(value),
+  },
+] as const;
+
+type ShakeKey =
+  | "role"
+  | "location"
+  | "services"
+  | "customService"
+  | "whatsapp"
+  | "email"
+  | "password";
+
+type ShakeCounts = Record<ShakeKey, number>;
+
+const emptyShakeCounts: ShakeCounts = {
+  role: 0,
+  location: 0,
+  services: 0,
+  customService: 0,
+  whatsapp: 0,
+  email: 0,
+  password: 0,
+};
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function getPasswordStatus(value: string) {
+  return PASSWORD_RULES.map((rule) => ({
+    ...rule,
+    met: rule.test(value),
+  }));
+}
+
+function allPasswordRulesMet(value: string) {
+  return getPasswordStatus(value).every((rule) => rule.met);
+}
 
 function formatWhatsapp(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -118,6 +180,131 @@ function FloatingIcon({
   return (
     <Animated.View pointerEvents="none" style={[styles.floatingIcon, position, style]}>
       <Feather name={name} size={18} color="#CCFF00" />
+    </Animated.View>
+  );
+}
+
+function ShakeView({
+  shakeKey,
+  style,
+  children,
+}: {
+  shakeKey: number;
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const offset = useSharedValue(0);
+
+  useEffect(() => {
+    if (!shakeKey) return;
+    offset.value = withSequence(
+      withTiming(-8, { duration: 45 }),
+      withTiming(8, { duration: 45 }),
+      withTiming(-6, { duration: 45 }),
+      withTiming(6, { duration: 45 }),
+      withTiming(0, { duration: 45 }),
+    );
+  }, [offset, shakeKey]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: offset.value }],
+  }));
+
+  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+}
+
+function BouncyPressable({
+  children,
+  disabled,
+  onPress,
+  wrapperStyle,
+  style,
+  contentStyle,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onPress: () => void;
+  wrapperStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+}) {
+  const scale = useSharedValue(1);
+  const glow = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: disabled ? 0.55 : 1,
+    transform: [{ scale: scale.value }],
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: glow.value,
+    transform: [{ scale: interpolate(glow.value, [0, 1], [0.94, 1.15]) }],
+  }));
+
+  function playPress() {
+    scale.value = withSequence(
+      withTiming(0.94, { duration: 80 }),
+      withSpring(1, { damping: 16, stiffness: 260 }),
+    );
+    glow.value = withSequence(
+      withTiming(1, { duration: 80 }),
+      withDelay(40, withTiming(0, { duration: 360 })),
+    );
+  }
+
+  return (
+    <Animated.View style={[styles.bouncyWrap, wrapperStyle, animatedStyle]}>
+      <Animated.View pointerEvents="none" style={[styles.tapRing, ringStyle]} />
+      <Pressable
+        disabled={disabled}
+        onPress={() => {
+          playPress();
+          onPress();
+        }}
+        style={[style, contentStyle]}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function PasswordRequirement({
+  label,
+  met,
+  shakeKey,
+}: {
+  label: string;
+  met: boolean;
+  shakeKey: number;
+}) {
+  const offset = useSharedValue(0);
+
+  useEffect(() => {
+    if (!shakeKey || met) return;
+    offset.value = withSequence(
+      withTiming(-6, { duration: 45 }),
+      withTiming(6, { duration: 45 }),
+      withTiming(-4, { duration: 45 }),
+      withTiming(4, { duration: 45 }),
+      withTiming(0, { duration: 45 }),
+    );
+  }, [met, offset, shakeKey]);
+
+  const rowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: offset.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.passwordRule, rowStyle]}>
+      <Feather
+        name={met ? "check-circle" : "circle"}
+        size={13}
+        color={met ? APP_GREEN : "#FFFFFF"}
+      />
+      <Text style={[styles.passwordRuleText, met && styles.passwordRuleTextMet]}>
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -174,6 +361,10 @@ export function RegisterOnboarding() {
   const [whatsapp, setWhatsapp] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [shakeCounts, setShakeCounts] = useState<ShakeCounts>(emptyShakeCounts);
+  const [passwordRulesShake, setPasswordRulesShake] = useState(0);
+  const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   const animatedIndex = useSharedValue(0);
   const steppedAhead = useSharedValue(0);
@@ -183,6 +374,7 @@ export function RegisterOnboarding() {
   const subWidth = Math.min(width * 0.2, 88);
 
   const forbidden = findForbiddenService(customService);
+  const passwordStatus = useMemo(() => getPasswordStatus(password), [password]);
   const visibleServices = useMemo(() => {
     const term = normalize(serviceQuery);
     return SERVICE_OPTIONS.filter((item) => normalize(item).includes(term));
@@ -202,8 +394,8 @@ export function RegisterOnboarding() {
     const phone = digitsOnly(whatsapp);
     return (
       (phone.length === 10 || phone.length === 11) &&
-      email.includes("@") &&
-      password.length >= 6
+      isValidEmail(email) &&
+      allPasswordRulesMet(password)
     );
   };
 
@@ -219,14 +411,63 @@ export function RegisterOnboarding() {
   }));
 
   function goTo(next: number) {
+    setRegisterError("");
+    setRegisterSuccess("");
     setIndex(next);
     animatedIndex.value = withSpring(next, SPRING_CONFIG);
     steppedAhead.value = withSpring(next === 0 ? 0 : 1, SPRING_CONFIG);
   }
 
+  function shake(keys: ShakeKey[]) {
+    setShakeCounts((current) => {
+      const next = { ...current };
+      keys.forEach((key) => {
+        next[key] += 1;
+      });
+      return next;
+    });
+  }
+
+  function showMissingFeedback() {
+    if (index === 0) {
+      if (!role) shake(["role"]);
+      return;
+    }
+
+    if (index === 1) {
+      if (!location.uf || !location.city || !location.neighborhood) {
+        shake(["location"]);
+      }
+      return;
+    }
+
+    if (index === 2) {
+      const hasCatalog = selectedServices.some((item) => item !== OTHER_SERVICE_LABEL);
+      const wantsOther = selectedServices.includes(OTHER_SERVICE_LABEL);
+      if (!hasCatalog && !wantsOther) {
+        shake(["services"]);
+        return;
+      }
+      if (wantsOther && (customService.trim().length < 3 || forbidden)) {
+        shake(["customService"]);
+      }
+      return;
+    }
+
+    const missing: ShakeKey[] = [];
+    const phone = digitsOnly(whatsapp);
+    if (phone.length !== 10 && phone.length !== 11) missing.push("whatsapp");
+    if (!isValidEmail(email)) missing.push("email");
+    if (!allPasswordRulesMet(password)) {
+      missing.push("password");
+      setPasswordRulesShake((current) => current + 1);
+    }
+    shake(missing);
+  }
+
   async function handleContinue() {
     if (!canContinue()) {
-      Alert.alert("Quase lá", "Complete esta etapa para continuar.");
+      showMissingFeedback();
       return;
     }
     if (index < STEP_COUNT - 1) {
@@ -241,7 +482,7 @@ export function RegisterOnboarding() {
       );
 
     setSaving(true);
-    const success = await completeRegister({
+    const result = await completeRegister({
       role,
       location,
       email,
@@ -251,11 +492,15 @@ export function RegisterOnboarding() {
     });
     setSaving(false);
 
-    if (!success) {
-      Alert.alert(
-        "Cadastro não concluído",
-        "Confira os dados ou tente usar outro e-mail.",
-      );
+    if (!result.success) {
+      setRegisterError(result.message ?? "Cadastro não concluído. Confira os dados ou tente usar outro e-mail.");
+      setRegisterSuccess("");
+      return;
+    }
+
+    if (result.pendingConfirmation && result.message) {
+      setRegisterSuccess(result.message);
+      setRegisterError("");
     }
   }
 
@@ -301,10 +546,15 @@ export function RegisterOnboarding() {
       {FLOATING_ICONS.map((icon) => (
         <FloatingIcon key={icon.name} {...icon} />
       ))}
-      <Pressable style={styles.close} onPress={closeRegister}>
+      <BouncyPressable
+        wrapperStyle={styles.close}
+        style={styles.closePressable}
+        onPress={closeRegister}
+        contentStyle={styles.closeContent}
+      >
         <Feather name="arrow-left" size={16} color="#A1A1AA" />
         <Text style={styles.closeText}>Voltar ao login</Text>
-      </Pressable>
+      </BouncyPressable>
       <View style={styles.inner}>
         <View style={[styles.cardWrap, { width }]}>
           <View style={[styles.card, { width: cardWidth, minHeight: Math.min(height * 0.56, 520) }]}>
@@ -313,8 +563,8 @@ export function RegisterOnboarding() {
             <Text style={styles.stepSubtitle}>{copy.subtitle}</Text>
 
             {index === 0 ? (
-              <View style={styles.roleRow}>
-                <Pressable
+              <ShakeView shakeKey={shakeCounts.role} style={styles.roleRow}>
+                <BouncyPressable
                   style={[styles.roleButton, role === "cliente" && styles.roleButtonActive]}
                   onPress={() => setRole("cliente")}
                 >
@@ -329,8 +579,8 @@ export function RegisterOnboarding() {
                     <Text style={styles.roleLabel}>Sou cliente</Text>
                     <Text style={styles.roleHint}>Quero contratar profissionais</Text>
                   </View>
-                </Pressable>
-                <Pressable
+                </BouncyPressable>
+                <BouncyPressable
                   style={[
                     styles.roleButton,
                     role === "profissional" && styles.roleButtonActive,
@@ -353,45 +603,49 @@ export function RegisterOnboarding() {
                     <Text style={styles.roleLabel}>Sou profissional</Text>
                     <Text style={styles.roleHint}>Quero oferecer meus serviços</Text>
                   </View>
-                </Pressable>
-              </View>
+                </BouncyPressable>
+              </ShakeView>
             ) : null}
 
             {index === 1 ? (
-              <LocationFields showStreet value={location} onChange={setLocation} />
+              <ShakeView shakeKey={shakeCounts.location}>
+                <LocationFields showStreet value={location} onChange={setLocation} />
+              </ShakeView>
             ) : null}
 
             {index === 2 ? (
               <>
-                <View style={styles.searchBox}>
-                  <Feather name="search" size={16} color="#71717A" />
-                  <TextInput
-                    value={serviceQuery}
-                    onChangeText={setServiceQuery}
-                    placeholder="Pesquisar serviço"
-                    placeholderTextColor="#71717A"
-                    style={styles.searchInput}
-                  />
-                </View>
-                <ScrollView style={{ maxHeight: 210 }} keyboardShouldPersistTaps="handled">
-                  <View style={styles.chips}>
-                    {visibleServices.map((item) => (
-                      <AnimatedCheckbox
-                        key={item}
-                        label={item}
-                        checked={selectedServices.includes(item)}
-                        onPress={() => toggleService(item)}
-                      />
-                    ))}
-                    <AnimatedCheckbox
-                      label={OTHER_SERVICE_LABEL}
-                      checked={selectedServices.includes(OTHER_SERVICE_LABEL)}
-                      onPress={() => toggleService(OTHER_SERVICE_LABEL)}
+                <ShakeView shakeKey={shakeCounts.services}>
+                  <View style={styles.searchBox}>
+                    <Feather name="search" size={16} color="#71717A" />
+                    <TextInput
+                      value={serviceQuery}
+                      onChangeText={setServiceQuery}
+                      placeholder="Pesquisar serviço"
+                      placeholderTextColor="#71717A"
+                      style={styles.searchInput}
                     />
                   </View>
-                </ScrollView>
+                  <ScrollView style={{ maxHeight: 210 }} keyboardShouldPersistTaps="handled">
+                    <View style={styles.chips}>
+                      {visibleServices.map((item) => (
+                        <AnimatedCheckbox
+                          key={item}
+                          label={item}
+                          checked={selectedServices.includes(item)}
+                          onPress={() => toggleService(item)}
+                        />
+                      ))}
+                      <AnimatedCheckbox
+                        label={OTHER_SERVICE_LABEL}
+                        checked={selectedServices.includes(OTHER_SERVICE_LABEL)}
+                        onPress={() => toggleService(OTHER_SERVICE_LABEL)}
+                      />
+                    </View>
+                  </ScrollView>
+                </ShakeView>
                 {selectedServices.includes(OTHER_SERVICE_LABEL) ? (
-                  <>
+                  <ShakeView shakeKey={shakeCounts.customService}>
                     <TextInput
                       value={customService}
                       onChangeText={setCustomService}
@@ -404,38 +658,70 @@ export function RegisterOnboarding() {
                         Este serviço não é permitido na plataforma.
                       </Text>
                     ) : null}
-                  </>
+                  </ShakeView>
                 ) : null}
               </>
             ) : null}
 
             {index === 3 ? (
               <>
-                <TextInput
-                  value={whatsapp}
-                  onChangeText={(value) => setWhatsapp(formatWhatsapp(value))}
-                  placeholder="WhatsApp: (11) 99999-9999"
-                  placeholderTextColor="#71717A"
-                  keyboardType="phone-pad"
-                  style={styles.input}
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="E-mail"
-                  placeholderTextColor="#71717A"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  style={[styles.input, styles.stackedInput]}
-                />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Senha com pelo menos 6 caracteres"
-                  placeholderTextColor="#71717A"
-                  secureTextEntry
-                  style={[styles.input, styles.stackedInput]}
-                />
+                <ShakeView shakeKey={shakeCounts.whatsapp}>
+                  <TextInput
+                    value={whatsapp}
+                    onChangeText={(value) => {
+                      setWhatsapp(formatWhatsapp(value));
+                      setRegisterError("");
+                      setRegisterSuccess("");
+                    }}
+                    placeholder="WhatsApp: (11) 99999-9999"
+                    placeholderTextColor="#71717A"
+                    keyboardType="phone-pad"
+                    style={styles.input}
+                  />
+                </ShakeView>
+                <ShakeView shakeKey={shakeCounts.email}>
+                  <TextInput
+                    value={email}
+                    onChangeText={(value) => {
+                      setEmail(value);
+                      setRegisterError("");
+                      setRegisterSuccess("");
+                    }}
+                    placeholder="E-mail"
+                    placeholderTextColor="#71717A"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={[styles.input, styles.stackedInput]}
+                  />
+                </ShakeView>
+                <ShakeView shakeKey={shakeCounts.password}>
+                  <TextInput
+                    value={password}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      setRegisterError("");
+                      setRegisterSuccess("");
+                    }}
+                    placeholder="Senha"
+                    placeholderTextColor="#71717A"
+                    secureTextEntry
+                    style={[styles.input, styles.stackedInput]}
+                  />
+                </ShakeView>
+                <View style={styles.passwordRules}>
+                  {passwordStatus.map((rule) => (
+                    <PasswordRequirement
+                      key={rule.key}
+                      label={rule.label}
+                      met={rule.met}
+                      shakeKey={passwordRulesShake}
+                    />
+                  ))}
+                </View>
+                {registerError ? <Text style={styles.registerError}>{registerError}</Text> : null}
+                {registerSuccess ? (
+                  <Text style={styles.registerSuccess}>{registerSuccess}</Text>
+                ) : null}
               </>
             ) : null}
           </View>
@@ -445,24 +731,22 @@ export function RegisterOnboarding() {
 
         <View style={[styles.controls, { maxWidth: Math.min(width, 520) }]}>
           <Animated.View style={[styles.backButton, backButtonStyle]}>
-            <Pressable
+            <BouncyPressable
               onPress={() => index > 0 && goTo(index - 1)}
-              style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}
+              wrapperStyle={styles.controlButtonFill}
+              style={styles.controlButtonFill}
+              contentStyle={styles.controlButtonContent}
             >
               <Text style={styles.backButtonText}>Voltar</Text>
-            </Pressable>
+            </BouncyPressable>
           </Animated.View>
           <Animated.View style={[styles.mainButton, mainButtonStyle]}>
-            <Pressable
+            <BouncyPressable
               onPress={handleContinue}
-              style={{
-                width: "100%",
-                height: "100%",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
+              disabled={saving}
+              wrapperStyle={styles.controlButtonFill}
+              style={styles.controlButtonFill}
+              contentStyle={styles.mainButtonContent}
             >
               {index >= STEP_COUNT - 1 ? (
                 <Animated.View
@@ -476,7 +760,7 @@ export function RegisterOnboarding() {
               <Text style={styles.mainButtonText}>
                 {index >= STEP_COUNT - 1 ? (saving ? "Salvando..." : "Finalizar") : "Continuar"}
               </Text>
-            </Pressable>
+            </BouncyPressable>
           </Animated.View>
         </View>
       </View>

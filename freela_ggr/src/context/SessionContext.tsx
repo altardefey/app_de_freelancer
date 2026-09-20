@@ -15,6 +15,12 @@ type RegisterPayload = {
   services: string[];
 };
 
+type RegisterResult = {
+  success: boolean;
+  message?: string;
+  pendingConfirmation?: boolean;
+};
+
 type SessionContextValue = {
   role: Role | null;
   authScreen: AuthScreen;
@@ -26,7 +32,7 @@ type SessionContextValue = {
   logout: () => Promise<void>;
   openRegister: () => void;
   closeRegister: () => void;
-  completeRegister: (payload: RegisterPayload) => Promise<boolean>;
+  completeRegister: (payload: RegisterPayload) => Promise<RegisterResult>;
 };
 
 type ProfileRow = {
@@ -79,6 +85,37 @@ async function loadProfile(userId: string) {
   return data as ProfileRow | null;
 }
 
+function authErrorMessage(error: { message: string; code?: string; status?: number }) {
+  const normalized = error.message.toLowerCase();
+
+  if (normalized.includes("already") || normalized.includes("registered")) {
+    return "Esse e-mail já está cadastrado. Tente entrar pelo login.";
+  }
+
+  if (
+    normalized.includes("signup") ||
+    normalized.includes("sign up") ||
+    normalized.includes("disabled") ||
+    normalized.includes("not allowed")
+  ) {
+    return "O cadastro por e-mail parece estar desativado no Supabase. Vá em Authentication > Providers > Email e ative o provedor de e-mail e o cadastro de novos usuários.";
+  }
+
+  if (normalized.includes("rate limit")) {
+    return "O Supabase atingiu o limite temporário de envio de e-mails deste projeto. Para testar agora, desative a confirmação por e-mail em Authentication > Providers > Email ou aguarde o limite liberar.";
+  }
+
+  if (normalized.includes("password")) {
+    return "A senha não foi aceita pelo Supabase. Tente uma senha mais forte.";
+  }
+
+  if (normalized.includes("email")) {
+    return `O Supabase recusou este e-mail: ${error.message}`;
+  }
+
+  return `Cadastro não concluído: ${error.message}`;
+}
+
 async function saveProfile(userId: string, payload: RegisterPayload) {
   const { error } = await supabase.from("profiles").upsert({
     id: userId,
@@ -93,7 +130,7 @@ async function saveProfile(userId: string, payload: RegisterPayload) {
     services: payload.services,
   });
 
-  return !error;
+  return { success: !error, message: error?.message };
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -186,21 +223,60 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const { data, error } = await supabase.auth.signUp({
           email: payload.email.trim(),
           password: payload.password,
+          options: {
+            data: {
+              role: payload.role,
+              cep: payload.location.cep,
+              street: payload.location.street,
+              neighborhood: payload.location.neighborhood,
+              uf: payload.location.uf,
+              state_name: payload.location.stateName,
+              city: payload.location.city,
+              whatsapp: payload.whatsapp.replace(/\D/g, ""),
+              services: payload.services,
+            },
+          },
         });
 
-        if (error) return false;
+        if (error) {
+          return { success: false, message: authErrorMessage(error) };
+        }
 
         const signedUser = data.user;
+
+        if (signedUser?.identities?.length === 0) {
+          return {
+            success: false,
+            message: "Esse e-mail já está cadastrado. Tente entrar pelo login.",
+          };
+        }
+
+        if (signedUser && !data.session) {
+          return {
+            success: true,
+            pendingConfirmation: true,
+            message:
+              "Cadastro criado. Agora confirme o e-mail pelo link que o Supabase enviou e depois entre pelo login.",
+          };
+        }
+
+        if (signedUser) {
+          const profile = await saveProfile(signedUser.id, payload);
+          if (!profile.success) {
+            return {
+              success: false,
+              message:
+                "A conta foi criada, mas o perfil não foi salvo. Confirme o e-mail e tente entrar pelo login.",
+            };
+          }
+        }
+
         setUser(signedUser);
         setLocation(payload.location);
         setRole(payload.role);
         setAuthScreen("login");
 
-        if (signedUser) {
-          await saveProfile(signedUser.id, payload);
-        }
-
-        return true;
+        return { success: true };
       },
     }),
     [authScreen, loading, location, role, user],

@@ -162,10 +162,11 @@ export function ClientHomeScreen() {
     if (!result.canceled) setAttachmentUri(result.assets[0].uri);
   }
 
-  function rateJob(id: string, rating: number) {
+  async function rateJob(id: string, rating: number) {
     setCompletedJobs((current) =>
       current.map((job) => (job.id === id ? { ...job, rating } : job)),
     );
+    await updateJobRating(id, rating);
   }
 
   const locationLabel = location.neighborhood
@@ -250,9 +251,18 @@ export function ClientHomeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Serviços concluídos</Text>
-          {completedJobs.map((job) => (
-            <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
-          ))}
+          {completedJobs.length ? (
+            completedJobs.map((job) => (
+              <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Nenhum serviço concluído</Text>
+              <Text style={styles.emptyText}>
+                Quando um pedido for concluído, a avaliação aparecerá aqui.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
       <Modal

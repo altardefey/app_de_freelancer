@@ -56,6 +56,65 @@ create table if not exists public.completed_jobs (
   created_at timestamptz not null default now()
 );
 
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (
+    id,
+    role,
+    cep,
+    street,
+    neighborhood,
+    uf,
+    state_name,
+    city,
+    whatsapp,
+    services
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'role', 'cliente'),
+    new.raw_user_meta_data->>'cep',
+    new.raw_user_meta_data->>'street',
+    new.raw_user_meta_data->>'neighborhood',
+    new.raw_user_meta_data->>'uf',
+    new.raw_user_meta_data->>'state_name',
+    new.raw_user_meta_data->>'city',
+    new.raw_user_meta_data->>'whatsapp',
+    coalesce(
+      array(
+        select jsonb_array_elements_text(
+          coalesce(new.raw_user_meta_data->'services', '[]'::jsonb)
+        )
+      ),
+      '{}'
+    )
+  )
+  on conflict (id) do update set
+    role = excluded.role,
+    cep = excluded.cep,
+    street = excluded.street,
+    neighborhood = excluded.neighborhood,
+    uf = excluded.uf,
+    state_name = excluded.state_name,
+    city = excluded.city,
+    whatsapp = excluded.whatsapp,
+    services = excluded.services,
+    updated_at = now();
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
 alter table public.profiles enable row level security;
 alter table public.services enable row level security;
 alter table public.budgets enable row level security;
