@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
@@ -21,6 +20,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+
+import { BlurView } from "expo-blur";
 import { styles } from "./HomeScreen.styles";
 
 type Role = "cliente" | "profissional";
@@ -109,6 +110,7 @@ const services: Service[] = [
     trending: true,
   },
 ];
+
 const initialBudgets: Budget[] = [
   {
     id: "1",
@@ -143,6 +145,7 @@ const initialBudgets: Budget[] = [
     status: "recusado",
   },
 ];
+
 const categories = [
   "Todos",
   "Pintura",
@@ -152,6 +155,7 @@ const categories = [
   "Marcenaria",
   "Refrigeração",
 ];
+
 const dictionary = services.flatMap((service) => [
   service.title.toLowerCase(),
   service.category.toLowerCase(),
@@ -164,6 +168,7 @@ function normalize(value: string) {
     .toLowerCase()
     .trim();
 }
+
 function distance(first: string, second: string) {
   const matrix = Array.from({ length: second.length + 1 }, (_, row) =>
     Array.from({ length: first.length + 1 }, (_, column) =>
@@ -180,6 +185,7 @@ function distance(first: string, second: string) {
       );
   return matrix[second.length][first.length];
 }
+
 function findSuggestion(query: string) {
   const term = normalize(query);
   if (
@@ -199,6 +205,7 @@ function findSuggestion(query: string) {
   );
   return suggestion?.word ?? null;
 }
+
 function Logo() {
   return (
     <View style={styles.logo}>
@@ -229,7 +236,7 @@ function LoginActionButton({
     pulse.value = withSequence(
       withTiming(0.15, { duration: 0 }),
       withTiming(1, { duration: 650 }, () => {
-      pulse.value = 0;
+        pulse.value = 0;
       }),
     );
     if (actionDelay > 0) {
@@ -272,6 +279,7 @@ function LoginActionButton({
     </View>
   );
 }
+
 function Pill({
   label,
   active,
@@ -323,6 +331,7 @@ export default function HomeScreen() {
       );
     });
   }, [category, query, suggestion]);
+
   function login(selectedRole: Role) {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
@@ -333,6 +342,7 @@ export default function HomeScreen() {
     }
     setRole(selectedRole);
   }
+
   function updateBudget(id: string, status: BudgetStatus) {
     setBudgets((current) =>
       current.map((budget) =>
@@ -340,10 +350,12 @@ export default function HomeScreen() {
       ),
     );
   }
+
   function openService(service: Service) {
     setAttachmentUri(null);
     setSelectedService(service);
   }
+
   async function attachImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -371,18 +383,30 @@ export default function HomeScreen() {
         <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbBlue]} />
         <View pointerEvents="none" style={[styles.loginOrb, styles.loginOrbPeach]} />
         <View style={[styles.loginLayout, width < 760 && styles.loginLayoutMobile]}>
-          <View style={[styles.loginIntro, width < 760 && styles.loginIntroMobile]}>
-            <Logo />
-            <Text style={styles.eyebrow}>PLATAFORMA DE SERVIÇOS</Text>
-            <Text style={[styles.loginTitle, width < 760 && styles.loginTitleMobile]}>Encontre quem resolve.</Text>
-            <Text style={[styles.loginSubtitle, width < 760 && styles.loginSubtitleMobile]}>
-              Conectando clientes a profissionais confiáveis para fazer acontecer.
-            </Text>
-            <View style={styles.loginTrust}>
-              <Feather name="shield" size={16} color="#4F7D6B" />
-              <Text style={styles.loginTrustText}>Profissionais avaliados pela comunidade</Text>
-            </View>
+          
+          {/* LADO ESQUERDO COM O EFEITO VIDRO (EXPO BLUR) */}
+          <View style={styles.glassContainerLeft}>
+            <BlurView intensity={40} tint="dark" style={styles.glassBlur}>
+              <View style={[styles.loginIntro, width < 760 && styles.loginIntroMobile]}>
+                <Logo />
+                <Text style={styles.eyebrow}>PLATAFORMA DE SERVIÇOS</Text>
+                <Text style={[styles.loginTitle, width < 760 && styles.loginTitleMobile]}>
+                  Encontre quem resolve.
+                </Text>
+                <Text style={[styles.loginSubtitle, width < 760 && styles.loginSubtitleMobile]}>
+                  Conectando clientes a profissionais confiáveis para fazer acontecer.
+                </Text>
+                <View style={styles.loginTrust}>
+                  <Feather name="shield" size={16} color="#4F7D6B" />
+                  <Text style={styles.loginTrustText}>
+                    Profissionais avaliados pela comunidade
+                  </Text>
+                </View>
+              </View>
+            </BlurView>
           </View>
+
+          {/* LADO DIREITO - CARD DE LOGIN */}
           <View style={[styles.loginCard, width < 760 && styles.loginCardMobile]}>
             {!loginRole ? (
               <>
@@ -524,7 +548,7 @@ export default function HomeScreen() {
           {query || category !== "Todos" ? (
             <ServiceList
               items={filteredServices}
-                onSelect={openService}
+              onSelect={openService}
               title={`Resultados (${filteredServices.length})`}
             />
           ) : (
@@ -707,6 +731,7 @@ function ServiceList({
     </View>
   );
 }
+
 function ServiceRail({
   title,
   items,
@@ -766,6 +791,7 @@ function ServiceRail({
     </View>
   );
 }
+
 function ServiceCard({
   service,
   onSelect,
@@ -789,6 +815,7 @@ function ServiceCard({
     </Pressable>
   );
 }
+
 function Metric({
   label,
   value,
@@ -813,6 +840,7 @@ function Metric({
     </View>
   );
 }
+
 function BudgetCard({
   budget,
   onUpdate,
@@ -858,418 +886,3 @@ function BudgetCard({
     </View>
   );
 }
-
-const legacyStyles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#F4F3EF" },
-  content: { padding: 24, paddingBottom: 48 },
-  header: {
-    height: 76,
-    paddingHorizontal: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F4F3EF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E3E1DB",
-  },
-  logo: { flexDirection: "row", alignItems: "center" },
-  logoMark: {
-    backgroundColor: "#E96745",
-    color: "#FFF",
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    textAlign: "center",
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 31,
-  },
-  logoText: {
-    color: "#1F2928",
-    fontSize: 22,
-    fontWeight: "800",
-    marginLeft: 8,
-    letterSpacing: -0.6,
-  },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 18 },
-  headerRole: {
-    color: "#1D7790",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  headerRoleGreen: {
-    color: "#37826A",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  logout: { color: "#6E756F", fontSize: 13, fontWeight: "700" },
-  overline: {
-    color: "#1D7790",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-    marginTop: 22,
-  },
-  overlineGreen: {
-    color: "#37826A",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-    marginTop: 22,
-  },
-  pageTitle: {
-    color: "#1F2928",
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -0.8,
-    marginTop: 8,
-  },
-  pageSubtitle: {
-    color: "#6E756F",
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 8,
-    maxWidth: 560,
-  },
-  searchBox: {
-    height: 54,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#DCDDD8",
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    marginTop: 24,
-  },
-  searchIcon: {
-    color: "#E96745",
-    fontSize: 29,
-    marginRight: 10,
-    lineHeight: 30,
-  },
-  searchInput: { flex: 1, color: "#1F2928", fontSize: 14 },
-  clear: { color: "#1D7790", fontSize: 12, fontWeight: "700" },
-  suggestion: {
-    backgroundColor: "#FFF2D9",
-    borderRadius: 10,
-    padding: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  suggestionText: { color: "#725B32", fontSize: 13 },
-  suggestionStrong: { fontWeight: "800", textDecorationLine: "underline" },
-  suggestionAction: { color: "#A26421", fontSize: 12, fontWeight: "800" },
-  categoryRow: { marginTop: 18, flexGrow: 0 },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
-    backgroundColor: "#E8E7E1",
-    marginRight: 8,
-  },
-  pillActive: { backgroundColor: "#1F2928" },
-  pillText: { color: "#6E756F", fontSize: 12, fontWeight: "700" },
-  pillTextActive: { color: "#FFF" },
-  section: { marginTop: 28 },
-  sectionTitle: {
-    color: "#1F2928",
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 13,
-  },
-  serviceRailCard: {
-    backgroundColor: "#1F2928",
-    borderRadius: 12,
-    padding: 17,
-    width: 190,
-    marginRight: 12,
-  },
-  railCategory: {
-    color: "#F5B45F",
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  railTitle: { color: "#FFF", fontSize: 16, fontWeight: "800", marginTop: 17 },
-  railProvider: { color: "#B8C4BF", fontSize: 12, marginTop: 5 },
-  railPrice: {
-    color: "#8BD0B5",
-    fontSize: 14,
-    fontWeight: "800",
-    marginTop: 22,
-  },
-  serviceCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E1DB",
-    padding: 16,
-    marginBottom: 11,
-  },
-  cardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  serviceCategory: {
-    color: "#1D7790",
-    backgroundColor: "#E2F0F2",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 5,
-    fontSize: 10,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  rating: { color: "#A26421", fontSize: 12, fontWeight: "700" },
-  serviceTitle: {
-    color: "#1F2928",
-    fontSize: 17,
-    fontWeight: "800",
-    marginTop: 10,
-  },
-  provider: { color: "#6E756F", fontSize: 13, marginTop: 3 },
-  description: {
-    color: "#646B66",
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 10,
-  },
-  serviceBottom: {
-    borderTopWidth: 1,
-    borderTopColor: "#EEEDE8",
-    marginTop: 14,
-    paddingTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  price: { color: "#37826A", fontSize: 13, fontWeight: "800" },
-  link: { color: "#1D7790", fontSize: 12, fontWeight: "800" },
-  empty: {
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#DCDDD8",
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  emptyTitle: { color: "#1F2928", fontWeight: "800" },
-  emptyText: { color: "#6E756F", fontSize: 13, marginTop: 5 },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 9,
-    marginTop: 24,
-  },
-  metric: {
-    width: "31.5%",
-    minHeight: 92,
-    borderRadius: 12,
-    padding: 14,
-    justifyContent: "space-between",
-  },
-  metricWide: { width: "100%", minHeight: 82 },
-  metricblue: { backgroundColor: "#DCEEF1" },
-  metricorange: { backgroundColor: "#F8E8D2" },
-  metricgreen: { backgroundColor: "#DCEDE3" },
-  metricdark: { backgroundColor: "#1F2928" },
-  metricLabel: { color: "#68736D", fontSize: 11, fontWeight: "800" },
-  metricValue: { color: "#1F2928", fontSize: 25, fontWeight: "800" },
-  greenButton: {
-    backgroundColor: "#37826A",
-    padding: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 17,
-  },
-  greenButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" },
-  budgetCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E1DB",
-    padding: 16,
-    marginBottom: 11,
-  },
-  budgetClient: { color: "#1F2928", fontSize: 16, fontWeight: "800" },
-  budgetDate: { color: "#8B9290", fontSize: 12, marginTop: 3 },
-  status: {
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
-    fontSize: 10,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  statussolicitado: { color: "#1D7790", backgroundColor: "#E2F0F2" },
-  statuspendente: { color: "#A26421", backgroundColor: "#F8E8D2" },
-  statusrealizado: { color: "#37826A", backgroundColor: "#DCEDE3" },
-  statusrecusado: { color: "#9B554B", backgroundColor: "#F5DFDC" },
-  budgetService: {
-    color: "#4F5954",
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 14,
-  },
-  budgetBottom: {
-    borderTopWidth: 1,
-    borderTopColor: "#EEEDE8",
-    marginTop: 14,
-    paddingTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  budgetValue: { color: "#1F2928", fontSize: 16, fontWeight: "800" },
-  actionRow: { flexDirection: "row", gap: 15 },
-  actionText: { color: "#37826A", fontSize: 12, fontWeight: "800" },
-  actionTextMuted: { color: "#9B554B", fontSize: 12, fontWeight: "800" },
-  loginPage: {
-    flexGrow: 1,
-    backgroundColor: "#1F2928",
-    padding: 24,
-    justifyContent: "center",
-  },
-  loginIntro: { marginBottom: 30 },
-  eyebrow: {
-    color: "#F5B45F",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginTop: 44,
-  },
-  loginTitle: {
-    color: "#FFF",
-    fontSize: 39,
-    lineHeight: 43,
-    fontWeight: "800",
-    marginTop: 12,
-    maxWidth: 390,
-  },
-  loginSubtitle: {
-    color: "#B8C4BF",
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 10,
-    maxWidth: 390,
-  },
-  loginCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 14,
-    padding: 22,
-    maxWidth: 500,
-    width: "100%",
-    alignSelf: "center",
-  },
-  cardTitle: {
-    color: "#1F2928",
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 16,
-  },
-  label: {
-    color: "#4F5954",
-    fontSize: 12,
-    fontWeight: "800",
-    marginBottom: 7,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: "#F4F3EF",
-    borderWidth: 1,
-    borderColor: "#DCDDD8",
-    borderRadius: 9,
-    minHeight: 46,
-    paddingHorizontal: 13,
-    color: "#1F2928",
-    fontSize: 14,
-  },
-  roleLabel: {
-    color: "#8B9290",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    marginTop: 22,
-    marginBottom: 9,
-  },
-  primaryButton: {
-    backgroundColor: "#E96745",
-    minHeight: 48,
-    borderRadius: 9,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  primaryButtonSmall: {
-    backgroundColor: "#E96745",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 9,
-  },
-  primaryButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" },
-  buttonArrow: { color: "#FFF", fontSize: 20 },
-  secondaryButton: {
-    backgroundColor: "#E7F0EB",
-    minHeight: 48,
-    borderRadius: 9,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 9,
-  },
-  secondaryButtonText: { color: "#37826A", fontSize: 14, fontWeight: "800" },
-  buttonArrowDark: { color: "#37826A", fontSize: 20 },
-  demoText: {
-    textAlign: "center",
-    color: "#8B9290",
-    fontSize: 11,
-    marginTop: 17,
-    lineHeight: 16,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(31, 41, 40, 0.6)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: "#FFF",
-    padding: 24,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
-  modalEyebrow: {
-    color: "#1D7790",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-  },
-  modalTitle: {
-    color: "#1F2928",
-    fontSize: 22,
-    fontWeight: "800",
-    marginTop: 9,
-  },
-  modalProvider: {
-    color: "#6E756F",
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 18,
-  },
-  messageInput: { minHeight: 100, paddingTop: 13, textAlignVertical: "top" },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 9,
-    marginTop: 16,
-  },
-  cancelButton: { paddingHorizontal: 16, paddingVertical: 12 },
-  cancelText: { color: "#6E756F", fontSize: 13, fontWeight: "800" },
-});
