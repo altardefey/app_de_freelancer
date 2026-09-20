@@ -41,6 +41,15 @@ type ProfileRow = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 5000) {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs);
+    }),
+  ]);
+}
+
 function profileToLocation(profile: ProfileRow | null): LocationValue {
   if (!profile) return emptyLocation;
   return {
@@ -54,11 +63,17 @@ function profileToLocation(profile: ProfileRow | null): LocationValue {
 }
 
 async function loadProfile(userId: string) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data, error } = await withTimeout(
+    Promise.resolve(supabase.from("profiles").select("*").eq("id", userId).maybeSingle()),
+    {
+      data: null,
+      error: null,
+      count: null,
+      status: 408,
+      statusText: "Timeout",
+      success: true,
+    },
+  );
 
   if (error) return null;
   return data as ProfileRow | null;
@@ -92,19 +107,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     async function hydrate() {
-      const { data } = await supabase.auth.getSession();
-      const currentUser = data.session?.user ?? null;
-      if (!mounted) return;
-      setUser(currentUser);
-
-      if (currentUser) {
-        const profile = await loadProfile(currentUser.id);
+      try {
+        const { data } = await withTimeout(
+          supabase.auth.getSession(),
+          { data: { session: null }, error: null },
+        );
+        const currentUser = data.session?.user ?? null;
         if (!mounted) return;
-        setRole(profile?.role ?? null);
-        setLocation(profileToLocation(profile));
-      }
+        setUser(currentUser);
 
-      setLoading(false);
+        if (currentUser) {
+          const profile = await loadProfile(currentUser.id);
+          if (!mounted) return;
+          setRole(profile?.role ?? null);
+          setLocation(profileToLocation(profile));
+        }
+      } catch (error) {
+        console.warn("Não foi possível carregar a sessão:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     }
 
     hydrate();

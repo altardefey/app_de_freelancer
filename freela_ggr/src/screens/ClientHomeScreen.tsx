@@ -113,15 +113,7 @@ export function ClientHomeScreen() {
         (!searchTerm || searchable.includes(searchTerm))
       );
     });
-  }, [
-    catalogServices,
-    category,
-    location.city,
-    location.neighborhood,
-    location.uf,
-    query,
-    suggestion,
-  ]);
+  }, [category, location.city, location.neighborhood, location.uf, query, suggestion]);
 
   const locatedServices = catalogServices.filter(
     (service) =>
@@ -174,7 +166,6 @@ export function ClientHomeScreen() {
     setCompletedJobs((current) =>
       current.map((job) => (job.id === id ? { ...job, rating } : job)),
     );
-    updateJobRating(id, rating);
   }
 
   const locationLabel = location.neighborhood
@@ -259,18 +250,9 @@ export function ClientHomeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Serviços concluídos</Text>
-          {completedJobs.length ? (
-            completedJobs.map((job) => (
-              <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
-            ))
-          ) : (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Nenhum serviço concluído</Text>
-              <Text style={styles.emptyText}>
-                A avaliação fica disponível depois que o serviço for finalizado.
-              </Text>
-            </View>
-          )}
+          {completedJobs.map((job) => (
+            <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
+          ))}
         </View>
       </ScrollView>
       <Modal
@@ -400,7 +382,7 @@ function ServiceRail({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, styles.sectionTitleFlush]}>{title}</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
         <View style={styles.arrowGroup}>
           <Pressable
             style={[styles.arrowButton, railOffset === 0 && styles.arrowButtonDisabled]}
@@ -452,6 +434,7 @@ function ServiceCard({
       <View style={styles.cardTop}>
         <Text style={styles.serviceCategory}>{service.category}</Text>
         <View style={styles.cardActions}>
+          <Text style={styles.rating}>Nota {service.rating}</Text>
           <ReportServiceButton serviceTitle={service.title} />
         </View>
       </View>

@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 
 import { Logo } from "../components/Logo";
 import { useSession } from "../context/SessionContext";
-import { listBudgets, updateBudgetStatus } from "../data/remote";
+import { initialBudgets } from "../data/catalog";
 import type { Budget, BudgetStatus } from "../types/app";
 import { styles } from "./HomeScreen.styles";
-import { NovoOrcamento } from "./NovoOrcamento";
 
 function Pill({
   label,
@@ -25,27 +24,10 @@ function Pill({
   );
 }
 
-function parseMoney(value: string) {
-  const amount = Number(value.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(amount) ? amount : 0;
-}
-
 export function ProfessionalHomeScreen() {
   const { logout } = useSession();
   const [budgetFilter, setBudgetFilter] = useState<"todos" | BudgetStatus>("todos");
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    listBudgets().then((items) => {
-      if (active) setBudgets(items);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
+  const [budgets, setBudgets] = useState(initialBudgets);
   const visibleBudgets = budgets.filter(
     (budget) => budgetFilter === "todos" || budget.status === budgetFilter,
   );
@@ -54,26 +36,10 @@ export function ProfessionalHomeScreen() {
     pendente: budgets.filter((budget) => budget.status === "pendente").length,
     realizado: budgets.filter((budget) => budget.status === "realizado").length,
   };
-  const monthTotal = budgets
-    .filter((budget) => budget.status === "realizado")
-    .reduce((sum, budget) => sum + parseMoney(budget.value), 0);
 
   function updateBudget(id: string, status: BudgetStatus) {
     setBudgets((current) =>
       current.map((budget) => (budget.id === id ? { ...budget, status } : budget)),
-    );
-    updateBudgetStatus(id, status);
-  }
-
-  if (creating) {
-    return (
-      <NovoOrcamento
-        onBack={() => setCreating(false)}
-        onCreate={(budget) => {
-          setBudgets((current) => [budget, ...current]);
-          setCreating(false);
-        }}
-      />
     );
   }
 
@@ -99,17 +65,17 @@ export function ProfessionalHomeScreen() {
           <Metric label="Solicitados" value={counts.solicitado} tone="blue" />
           <Metric label="Pendentes" value={counts.pendente} tone="orange" />
           <Metric label="Realizados" value={counts.realizado} tone="green" />
-          <Metric
-            label="Este mês"
-            value={monthTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            tone="dark"
-            wide
-          />
+          <Metric label="Este mês" value="R$ 1.840" tone="dark" wide />
         </View>
-        <Pressable style={styles.greenButton} onPress={() => setCreating(true)}>
+        <Pressable
+          style={styles.greenButton}
+          onPress={() =>
+            Alert.alert("Em breve", "A criação de orçamentos será conectada ao backend depois.")
+          }
+        >
           <Text style={styles.greenButtonText}>+ Criar novo orçamento</Text>
         </Pressable>
-        <Text style={[styles.sectionTitle, styles.budgetHeading]}>Seus orçamentos</Text>
+        <Text style={styles.sectionTitle}>Seus orçamentos</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -126,20 +92,9 @@ export function ProfessionalHomeScreen() {
             ),
           )}
         </ScrollView>
-        <View style={styles.budgetList}>
-          {visibleBudgets.length ? (
-            visibleBudgets.map((budget) => (
-              <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} />
-            ))
-          ) : (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Nenhum orçamento por aqui</Text>
-              <Text style={styles.emptyText}>
-                Crie uma proposta ou aguarde os pedidos dos clientes.
-              </Text>
-            </View>
-          )}
-        </View>
+        {visibleBudgets.map((budget) => (
+          <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} />
+        ))}
       </ScrollView>
     </View>
   );
