@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -17,17 +17,13 @@ import { Logo } from "../components/Logo";
 import { ReportServiceButton } from "../components/ReportServiceButton";
 import { ServiceRating } from "../components/ServiceRating";
 import { useSession } from "../context/SessionContext";
-import {
-  catalogDictionary,
-  catalogServices,
-  initialCompletedJobs,
-  serviceCategories,
-} from "../data/catalog";
+import { buildCatalogDictionary, serviceCategories } from "../data/catalog";
+import { listCompletedJobs, listServices, updateJobRating } from "../data/remote";
 import type { CompletedJob, Service } from "../types/app";
 import { distance, normalize } from "../utils/searchTools";
 import { styles } from "./HomeScreen.styles";
 
-function findSuggestion(query: string) {
+function findSuggestion(query: string, catalogDictionary: string[]) {
   const term = normalize(query);
   if (
     term.length < 3 ||
@@ -70,8 +66,28 @@ export function ClientHomeScreen() {
   const [category, setCategory] = useState("Todos");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [attachmentUri, setAttachmentUri] = useState<string | null>(null);
-  const [completedJobs, setCompletedJobs] = useState(initialCompletedJobs);
-  const suggestion = useMemo(() => findSuggestion(query), [query]);
+  const [catalogServices, setCatalogServices] = useState<Service[]>([]);
+  const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
+  const catalogDictionary = useMemo(
+    () => buildCatalogDictionary(catalogServices),
+    [catalogServices],
+  );
+  const suggestion = useMemo(
+    () => findSuggestion(query, catalogDictionary),
+    [catalogDictionary, query],
+  );
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([listServices(), listCompletedJobs()]).then(([services, jobs]) => {
+      if (!active) return;
+      setCatalogServices(services);
+      setCompletedJobs(jobs);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredServices = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -95,7 +111,15 @@ export function ClientHomeScreen() {
         (!searchTerm || searchable.includes(searchTerm))
       );
     });
-  }, [category, location.city, location.neighborhood, location.uf, query, suggestion]);
+  }, [
+    catalogServices,
+    category,
+    location.city,
+    location.neighborhood,
+    location.uf,
+    query,
+    suggestion,
+  ]);
 
   const locatedServices = catalogServices.filter(
     (service) =>
@@ -130,6 +154,7 @@ export function ClientHomeScreen() {
     setCompletedJobs((current) =>
       current.map((job) => (job.id === id ? { ...job, rating } : job)),
     );
+    updateJobRating(id, rating);
   }
 
   const locationLabel = location.neighborhood
@@ -214,9 +239,18 @@ export function ClientHomeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Serviços concluídos</Text>
-          {completedJobs.map((job) => (
-            <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
-          ))}
+          {completedJobs.length ? (
+            completedJobs.map((job) => (
+              <CompletedJobCard key={job.id} job={job} onRate={rateJob} />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Nenhum serviço concluído</Text>
+              <Text style={styles.emptyText}>
+                A avaliação fica disponível depois que o serviço for finalizado.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
       <Modal
@@ -345,7 +379,7 @@ function ServiceRail({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleFlush]}>{title}</Text>
         <View style={styles.arrowGroup}>
           <Pressable
             style={[styles.arrowButton, railOffset === 0 && styles.arrowButtonDisabled]}
@@ -397,7 +431,6 @@ function ServiceCard({
       <View style={styles.cardTop}>
         <Text style={styles.serviceCategory}>{service.category}</Text>
         <View style={styles.cardActions}>
-          <Text style={styles.rating}>Nota {service.rating}</Text>
           <ReportServiceButton serviceTitle={service.title} />
         </View>
       </View>

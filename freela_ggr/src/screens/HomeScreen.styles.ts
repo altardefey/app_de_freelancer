@@ -398,11 +398,48 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 18,
   },
   sectionTitle: {
     color: "#FFFFFF",
     fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 16,
+  },
+  sectionTitleFlush: {
+    marginBottom: 0,
+  },
+  budgetHeading: {
+    marginTop: 36,
+    marginBottom: 8,
+  },
+  budgetList: {
+    marginTop: 20,
+  },
+  formSectionTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 28,
+    marginBottom: 4,
+  },
+  formPrimaryButton: {
+    marginTop: 28,
+  },
+  secondaryFormButton: {
+    backgroundColor: "#27272A",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  secondaryFormButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "800",
   },
   arrowGroup: {
@@ -452,7 +489,7 @@ export const styles = StyleSheet.create({
   serviceCard: {
     backgroundColor: "#27272A",
     borderRadius: 16,
-    padding: 18,
+    padding: 22,
     marginBottom: 12,
   },
   cardTop: {
@@ -507,7 +544,8 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
   empty: {
-    padding: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     borderWidth: 1,
     borderColor: "#27272A",
     borderRadius: 16,
@@ -556,7 +594,7 @@ export const styles = StyleSheet.create({
   budgetCard: {
     backgroundColor: "#27272A",
     borderRadius: 16,
-    padding: 18,
+    padding: 22,
     marginBottom: 12,
   },
   budgetClient: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
@@ -679,7 +717,7 @@ export const styles = StyleSheet.create({
   completedCard: {
     backgroundColor: "#27272A",
     borderRadius: 16,
-    padding: 18,
+    padding: 22,
     marginBottom: 12,
   },
   starsRow: {
