@@ -376,7 +376,7 @@ export default function HomeScreen() {
             <Text style={styles.eyebrow}>PLATAFORMA DE SERVIÇOS</Text>
             <Text style={[styles.loginTitle, width < 760 && styles.loginTitleMobile]}>Encontre quem resolve.</Text>
             <Text style={[styles.loginSubtitle, width < 760 && styles.loginSubtitleMobile]}>
-              Conecte clientes a profissionais confiáveis para fazer acontecer.
+              Conectando clientes a profissionais confiáveis para fazer acontecer.
             </Text>
             <View style={styles.loginTrust}>
               <Feather name="shield" size={16} color="#4F7D6B" />
