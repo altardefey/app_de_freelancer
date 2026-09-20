@@ -1,0 +1,97 @@
+import type { Budget, CompletedJob, Service } from "../types/app";
+
+export const fallbackServices: Service[] = [
+  {
+    id: "local-service-1",
+    title: "Pintura residencial",
+    category: "Pintura",
+    provider: "Casa Nova Serviços",
+    price: "R$ 180",
+    rating: "4,9",
+    description: "Paredes, tetos e acabamento fino para renovar ambientes.",
+    uf: "SP",
+    city: "São Paulo",
+    neighborhood: "Vila Mariana",
+    trending: true,
+    recent: true,
+  },
+  {
+    id: "local-service-2",
+    title: "Instalação elétrica",
+    category: "Elétrica",
+    provider: "Voltagem Pro",
+    price: "R$ 120",
+    rating: "4,8",
+    description: "Instalações, reparos e revisão elétrica com checklist de segurança.",
+    uf: "SP",
+    city: "São Paulo",
+    neighborhood: "Pinheiros",
+    trending: true,
+    recent: false,
+  },
+  {
+    id: "local-service-3",
+    title: "Limpeza pós-obra",
+    category: "Limpeza",
+    provider: "Brilho Total",
+    price: "R$ 220",
+    rating: "4,7",
+    description: "Limpeza detalhada para deixar casa, loja ou escritório pronto para uso.",
+    uf: "RJ",
+    city: "Rio de Janeiro",
+    neighborhood: "Copacabana",
+    trending: false,
+    recent: true,
+  },
+  {
+    id: "local-service-4",
+    title: "Reparo hidráulico",
+    category: "Hidráulica",
+    provider: "Fluxo Assistência",
+    price: "R$ 95",
+    rating: "4,9",
+    description: "Vazamentos, torneiras, registros e tubulações com atendimento ágil.",
+    uf: "SP",
+    city: "São Paulo",
+    neighborhood: "Vila Mariana",
+    trending: true,
+    recent: true,
+  },
+];
+
+export const fallbackBudgets: Budget[] = [
+  {
+    id: "local-budget-1",
+    client: "Marina Alves",
+    service: "Pintura residencial",
+    value: "R$ 980,00",
+    date: "Hoje",
+    status: "solicitado",
+  },
+  {
+    id: "local-budget-2",
+    client: "Rafael Costa",
+    service: "Instalação elétrica",
+    value: "R$ 320,00",
+    date: "Ontem",
+    status: "pendente",
+  },
+  {
+    id: "local-budget-3",
+    client: "Bianca Souza",
+    service: "Limpeza pós-obra",
+    value: "R$ 540,00",
+    date: "12 jun",
+    status: "realizado",
+  },
+];
+
+export const fallbackCompletedJobs: CompletedJob[] = [
+  {
+    id: "local-job-1",
+    title: "Reparo hidráulico",
+    provider: "Fluxo Assistência",
+    date: "Finalizado em 10 jun",
+    rating: null,
+  },
+];
