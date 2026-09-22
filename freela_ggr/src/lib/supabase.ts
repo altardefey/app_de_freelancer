@@ -9,7 +9,7 @@ const supabaseUrl =
 
 const supabaseAnonKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlja2Z4eWRwb2t5dml6dmJqb3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MjY1MDYsImV4cCI6MjEwNTQwMjUwNn0.bi5d6FmjWQzmX485Ew0zoAw90zAj4RAlWyFAA2q4m3w";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inlja2Z4eWRwb2t5dml6dmJqb3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MjY1MDYsImV4cCI6MjEwNTQwMjUwNn0.bi5d6FmjWQzmX485Ew0zoAw90zAj4RAlWyFAA2q4m3w";
 
 const memoryStorage = {
   getItem: async () => null,
@@ -22,17 +22,9 @@ const authStorage =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-<<<<<<< HEAD
-    storage: AsyncStorage,
-=======
     storage: authStorage,
->>>>>>> origin/main
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> origin/main

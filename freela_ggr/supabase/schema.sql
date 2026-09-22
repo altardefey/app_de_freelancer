@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
 create extension if not exists "pgcrypto";
 
 create table if not exists public.profiles (
