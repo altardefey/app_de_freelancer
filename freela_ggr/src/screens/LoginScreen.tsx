@@ -47,11 +47,11 @@ export function LoginScreen() {
     }
 
     setSubmitting(true);
-    const success = await login({ role: loginRole, email, password });
+    const result = await login({ role: loginRole, email, password });
     setSubmitting(false);
 
-    if (!success) {
-      setFormError("Não foi possível entrar. Confira o e-mail, a senha e se o cadastro já foi confirmado.");
+    if (!result.success) {
+      setFormError(result.message ?? "Não foi possível entrar. Confira o e-mail, a senha e se o cadastro já foi confirmado.");
     }
   }
 

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+# app_de_freelancer
+Um aplicativo feito inteiramente em React com o propósito de gerar orçamento para trabalhadores autônomos e oferecer serviços a clientes de forma rápida e prática.
+=======
 # FREELA
 
 Aplicativo em desenvolvimento para conectar clientes a profissionais de serviços locais. A ideia é permitir que clientes encontrem profissionais por categoria e localização, solicitem orçamentos e avaliem serviços concluídos. Profissionais, por sua vez, acompanham pedidos recebidos e atualizam o status dos orçamentos.
@@ -184,3 +188,4 @@ supabase/
 ## Licença
 
 Veja o arquivo `LICENSE`.
+>>>>>>> origin/main
