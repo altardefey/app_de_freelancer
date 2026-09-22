@@ -3,6 +3,7 @@ import type { Budget, CompletedJob, Service } from "../types/app";
 export const fallbackServices: Service[] = [
   {
     id: "local-service-1",
+    providerId: null,
     title: "Pintura residencial",
     category: "Pintura",
     provider: "Casa Nova Serviços",
@@ -17,6 +18,7 @@ export const fallbackServices: Service[] = [
   },
   {
     id: "local-service-2",
+    providerId: null,
     title: "Instalação elétrica",
     category: "Elétrica",
     provider: "Voltagem Pro",
@@ -31,6 +33,7 @@ export const fallbackServices: Service[] = [
   },
   {
     id: "local-service-3",
+    providerId: null,
     title: "Limpeza pós-obra",
     category: "Limpeza",
     provider: "Brilho Total",
@@ -45,6 +48,7 @@ export const fallbackServices: Service[] = [
   },
   {
     id: "local-service-4",
+    providerId: null,
     title: "Reparo hidráulico",
     category: "Hidráulica",
     provider: "Fluxo Assistência",

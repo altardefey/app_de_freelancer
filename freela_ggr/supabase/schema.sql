@@ -125,11 +125,19 @@ drop policy if exists "profiles_insert_own" on public.profiles;
 drop policy if exists "profiles_update_own" on public.profiles;
 drop policy if exists "services_read_all" on public.services;
 drop policy if exists "services_insert_professional" on public.services;
+drop policy if exists "services_insert_own_professional" on public.services;
+drop policy if exists "services_update_own_professional" on public.services;
+drop policy if exists "services_delete_own_professional" on public.services;
 drop policy if exists "budgets_read_authenticated" on public.budgets;
 drop policy if exists "budgets_insert_authenticated" on public.budgets;
 drop policy if exists "budgets_update_authenticated" on public.budgets;
+drop policy if exists "budgets_select_related_users" on public.budgets;
+drop policy if exists "budgets_insert_own" on public.budgets;
+drop policy if exists "budgets_update_related_professional" on public.budgets;
 drop policy if exists "completed_jobs_read_own" on public.completed_jobs;
 drop policy if exists "completed_jobs_update_own" on public.completed_jobs;
+drop policy if exists "completed_jobs_select_own" on public.completed_jobs;
+drop policy if exists "completed_jobs_update_own_rating" on public.completed_jobs;
 
 create policy "profiles_select_own"
   on public.profiles for select
@@ -148,28 +156,40 @@ create policy "services_read_all"
   on public.services for select
   using (true);
 
-create policy "services_insert_professional"
+create policy "services_insert_own_professional"
   on public.services for insert
   with check (auth.uid() = provider_id);
 
-create policy "budgets_read_authenticated"
+create policy "services_update_own_professional"
+  on public.services for update
+  using (auth.uid() = provider_id)
+  with check (auth.uid() = provider_id);
+
+create policy "services_delete_own_professional"
+  on public.services for delete
+  using (auth.uid() = provider_id);
+
+create policy "budgets_select_related_users"
   on public.budgets for select
-  using (auth.role() = 'authenticated');
+  using (
+    auth.uid() = user_id
+    or auth.uid() = professional_id
+  );
 
-create policy "budgets_insert_authenticated"
+create policy "budgets_insert_own"
   on public.budgets for insert
-  with check (auth.role() = 'authenticated');
+  with check (auth.uid() = user_id);
 
-create policy "budgets_update_authenticated"
+create policy "budgets_update_related_professional"
   on public.budgets for update
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (auth.uid() = professional_id)
+  with check (auth.uid() = professional_id);
 
-create policy "completed_jobs_read_own"
+create policy "completed_jobs_select_own"
   on public.completed_jobs for select
   using (auth.uid() = user_id);
 
-create policy "completed_jobs_update_own"
+create policy "completed_jobs_update_own_rating"
   on public.completed_jobs for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

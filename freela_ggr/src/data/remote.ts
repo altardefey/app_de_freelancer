@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 
 type ServiceRow = {
   id: string | number;
+  provider_id?: string | null;
   title?: string | null;
   category?: string | null;
   provider?: string | null;
@@ -57,6 +58,7 @@ function formatDate(value: string | null | undefined) {
 function mapService(row: ServiceRow): Service {
   return {
     id: String(row.id),
+    providerId: row.provider_id ?? null,
     title: row.title || "Serviço",
     category: row.category || "Serviços",
     provider: row.provider || "Profissional",
@@ -153,6 +155,7 @@ export async function listCompletedJobs(): Promise<CompletedJob[]> {
 
 export async function createBudget(
   payload: Omit<Budget, "id" | "date" | "status"> & {
+    professionalId?: string | null;
     whatsapp?: string;
     status?: BudgetStatus;
   },
@@ -171,6 +174,7 @@ export async function createBudget(
     .from("budgets")
     .insert({
       user_id: userId,
+      professional_id: payload.professionalId ?? null,
       client: optimistic.client,
       service: optimistic.service,
       value: optimistic.value,

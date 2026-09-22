@@ -3,6 +3,7 @@ import type { Budget, CompletedJob, Service } from "../types/app";
 export const catalogServices: Service[] = [
   {
     id: "1",
+    providerId: null,
     title: "Pintura residencial",
     category: "Pintura",
     provider: "Casa Nova Serviços",
@@ -17,6 +18,7 @@ export const catalogServices: Service[] = [
   },
   {
     id: "2",
+    providerId: null,
     title: "Instalação elétrica",
     category: "Elétrica",
     provider: "Voltagem Pro",
@@ -30,6 +32,7 @@ export const catalogServices: Service[] = [
   },
   {
     id: "3",
+    providerId: null,
     title: "Limpeza pós-obra",
     category: "Limpeza",
     provider: "Brilho Total",
@@ -43,6 +46,7 @@ export const catalogServices: Service[] = [
   },
   {
     id: "4",
+    providerId: null,
     title: "Reparo hidráulico",
     category: "Hidráulica",
     provider: "Fluxo Assistência",
@@ -57,6 +61,7 @@ export const catalogServices: Service[] = [
   },
   {
     id: "5",
+    providerId: null,
     title: "Móveis planejados",
     category: "Marcenaria",
     provider: "Oficina Linha",
@@ -70,6 +75,7 @@ export const catalogServices: Service[] = [
   },
   {
     id: "6",
+    providerId: null,
     title: "Manutenção de ar-condicionado",
     category: "Refrigeração",
     provider: "Clima Certo",

@@ -139,6 +139,7 @@ export function ClientHomeScreen() {
       client: "Cliente do app",
       service: selectedService.title,
       value: selectedService.price,
+      professionalId: selectedService.providerId,
       status: "solicitado",
     });
     setSendingRequest(false);
