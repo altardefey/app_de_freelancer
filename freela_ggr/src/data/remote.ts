@@ -55,6 +55,7 @@ function formatDate(value: string | null | undefined) {
   return parsed.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
+// normaliza o que vem do supabase para o formato usado nas telas
 function mapService(row: ServiceRow): Service {
   return {
     id: String(row.id),
@@ -94,6 +95,7 @@ function mapCompletedJob(row: CompletedJobRow): CompletedJob {
   };
 }
 
+// evita quebrar a tela se a tabela ainda não existir no banco
 function isMissingTable(error: unknown) {
   return (
     typeof error === "object" &&
@@ -103,6 +105,7 @@ function isMissingTable(error: unknown) {
   );
 }
 
+// pega o usuário logado para salvar registros com dono
 async function currentUserId() {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
@@ -160,6 +163,7 @@ export async function createBudget(
     status?: BudgetStatus;
   },
 ): Promise<Budget> {
+  // mantém a interface funcionando mesmo se o banco falhar
   const optimistic: Budget = {
     id: `local-${Date.now()}`,
     client: payload.client,
@@ -170,6 +174,7 @@ export async function createBudget(
   };
 
   const userId = await currentUserId();
+  // liga o orçamento ao cliente e ao profissional, quando existir
   const { data, error } = await supabase
     .from("budgets")
     .insert({

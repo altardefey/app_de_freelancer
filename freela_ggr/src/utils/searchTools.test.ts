@@ -11,4 +11,4 @@ describe('searchTools', () => {
   });
 });
 
-//OBS: rodar o commando "npm install -D jest jest-expo @types/jest"
+// obs: para rodar teste, instala jest e jest-expo

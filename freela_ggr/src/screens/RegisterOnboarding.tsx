@@ -47,6 +47,7 @@ const PROGRESS_SIZE = DOT_SIZE * 2.6;
 const LEFT_SPACE = -(PROGRESS_SIZE - DOT_SIZE) / 2;
 const APP_GREEN = "#CCFF00";
 
+// controla o pulinho dos cards e botões
 const SPRING_CONFIG = {
   mass: 1,
   damping: 16,
@@ -71,6 +72,7 @@ const FLOATING_ICONS: {
   { name: "home", y: 0.46, side: "right", offset: 8, delay: 400 },
 ];
 
+// regras que aparecem no checklist da senha
 const PASSWORD_RULES = [
   {
     key: "length",
@@ -193,6 +195,7 @@ function ShakeView({
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 }) {
+  // treme o bloco quando falta alguma informação
   const offset = useSharedValue(0);
 
   useEffect(() => {
@@ -228,6 +231,7 @@ function BouncyPressable({
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
 }) {
+  // reaproveita a mesma animação de toque nos botões do app
   const scale = useSharedValue(1);
   const glow = useSharedValue(0);
 
@@ -278,6 +282,7 @@ function PasswordRequirement({
   met: boolean;
   shakeKey: number;
 }) {
+  // cada requisito muda de cor e treme se ainda não foi cumprido
   const offset = useSharedValue(0);
 
   useEffect(() => {
@@ -310,6 +315,7 @@ function PasswordRequirement({
 }
 
 function Paginator({ animatedIndex }: { animatedIndex: SharedValue<number> }) {
+  // mostra a etapa atual sem precisar de texto extra
   const progressStyle = useAnimatedStyle(() => ({
     width: interpolate(
       animatedIndex.value,
@@ -380,6 +386,7 @@ export function RegisterOnboarding() {
     return SERVICE_OPTIONS.filter((item) => normalize(item).includes(term));
   }, [serviceQuery]);
 
+  // valida só a etapa atual antes de avançar
   const canContinue = () => {
     if (index === 0) return Boolean(role);
     if (index === 1) return Boolean(location.uf && location.city && location.neighborhood);
@@ -429,6 +436,7 @@ export function RegisterOnboarding() {
   }
 
   function showMissingFeedback() {
+    // dá feedback visual no que está faltando
     if (index === 0) {
       if (!role) shake(["role"]);
       return;
@@ -475,6 +483,7 @@ export function RegisterOnboarding() {
       return;
     }
     if (!role) return;
+    // junta opções do catálogo com o campo livre de outro
     const services = selectedServices
       .filter((item) => item !== OTHER_SERVICE_LABEL)
       .concat(

@@ -1,5 +1,5 @@
--- Harden RLS policies without recreating tables.
--- Run this in the Supabase SQL Editor after the base schema exists.
+-- fecha as policies sem recriar tabela.
+-- roda isso no sql editor depois do schema base existir.
 
 alter table public.profiles enable row level security;
 alter table public.services enable row level security;

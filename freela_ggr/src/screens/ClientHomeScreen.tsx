@@ -70,6 +70,7 @@ export function ClientHomeScreen() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [catalogServices, setCatalogServices] = useState<Service[]>([]);
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
+  // cria uma lista simples de termos para sugerir buscas parecidas
   const catalogDictionary = useMemo(
     () => buildCatalogDictionary(catalogServices),
     [catalogServices],
@@ -80,6 +81,7 @@ export function ClientHomeScreen() {
   );
 
   useEffect(() => {
+    // carrega só dados reais do banco para não mostrar avaliação fake
     let active = true;
     Promise.all([listServices(), listCompletedJobs()]).then(([services, jobs]) => {
       if (!active) return;
@@ -135,6 +137,7 @@ export function ClientHomeScreen() {
     if (!selectedService) return;
 
     setSendingRequest(true);
+    // salva o pedido no banco com o profissional do serviço escolhido
     await createBudget({
       client: "Cliente do app",
       service: selectedService.title,
@@ -150,6 +153,7 @@ export function ClientHomeScreen() {
   }
 
   async function attachImage() {
+    // pede permissão antes de abrir a galeria do dispositivo
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Permissão necessária", "Permita o acesso às fotos para anexar uma imagem.");

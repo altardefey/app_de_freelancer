@@ -56,6 +56,7 @@ create table if not exists public.completed_jobs (
   created_at timestamptz not null default now()
 );
 
+-- cria o perfil quando um usuário nasce no auth.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -115,11 +116,13 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- liga a proteção por linha para cada tabela pública.
 alter table public.profiles enable row level security;
 alter table public.services enable row level security;
 alter table public.budgets enable row level security;
 alter table public.completed_jobs enable row level security;
 
+-- remove policies antigas antes de criar as versões atuais.
 drop policy if exists "profiles_select_own" on public.profiles;
 drop policy if exists "profiles_insert_own" on public.profiles;
 drop policy if exists "profiles_update_own" on public.profiles;
@@ -139,6 +142,7 @@ drop policy if exists "completed_jobs_update_own" on public.completed_jobs;
 drop policy if exists "completed_jobs_select_own" on public.completed_jobs;
 drop policy if exists "completed_jobs_update_own_rating" on public.completed_jobs;
 
+-- cada usuário só lê e edita o próprio perfil.
 create policy "profiles_select_own"
   on public.profiles for select
   using (auth.uid() = id);
@@ -152,6 +156,7 @@ create policy "profiles_update_own"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+-- serviços são públicos para leitura, mas só o dono altera.
 create policy "services_read_all"
   on public.services for select
   using (true);
@@ -169,6 +174,7 @@ create policy "services_delete_own_professional"
   on public.services for delete
   using (auth.uid() = provider_id);
 
+-- orçamentos ficam visíveis só para cliente e profissional ligados a eles.
 create policy "budgets_select_related_users"
   on public.budgets for select
   using (
@@ -185,6 +191,7 @@ create policy "budgets_update_related_professional"
   using (auth.uid() = professional_id)
   with check (auth.uid() = professional_id);
 
+-- avaliações só aparecem e mudam para o cliente do serviço concluído.
 create policy "completed_jobs_select_own"
   on public.completed_jobs for select
   using (auth.uid() = user_id);

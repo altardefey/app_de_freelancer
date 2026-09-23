@@ -52,6 +52,7 @@ type ProfileRow = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+// evita deixar a tela presa se o supabase demorar demais
 function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 5000) {
   return Promise.race([
     promise,
@@ -73,6 +74,7 @@ function profileToLocation(profile: ProfileRow | null): LocationValue {
   };
 }
 
+// busca o perfil que completa os dados do usuário autenticado
 async function loadProfile(userId: string) {
   const { data, error } = await withTimeout(
     Promise.resolve(supabase.from("profiles").select("*").eq("id", userId).maybeSingle()),
@@ -90,6 +92,7 @@ async function loadProfile(userId: string) {
   return data as ProfileRow | null;
 }
 
+// traduz erros do supabase para mensagens mais úteis na tela
 function authErrorMessage(error: { message: string; code?: string; status?: number }) {
   const normalized = error.message.toLowerCase();
 
@@ -128,6 +131,7 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
   return `Operação não concluída: ${error.message}`;
 }
 
+// salva os dados do onboarding na tabela de perfis
 async function saveProfile(userId: string, payload: RegisterPayload) {
   const { error } = await supabase.from("profiles").upsert({
     id: userId,
@@ -203,6 +207,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       setLocation,
       login: async ({ role: selectedRole, email, password }) => {
+        // o auth valida a senha, depois a gente confere o perfil no banco
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
@@ -234,6 +239,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           };
         }
 
+        // impede entrar escolhendo o papel errado na tela inicial
         if (profile.role !== selectedRole) {
           await supabase.auth.signOut();
           setUser(null);
@@ -262,6 +268,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       openRegister: () => setAuthScreen("register"),
       closeRegister: () => setAuthScreen("login"),
       completeRegister: async (payload) => {
+        // manda os dados junto do cadastro para o trigger criar o perfil
         const { data, error } = await supabase.auth.signUp({
           email: payload.email.trim(),
           password: payload.password,
