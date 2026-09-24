@@ -76,25 +76,30 @@ function profileToLocation(profile: ProfileRow | null): LocationValue {
 
 // busca o perfil que completa os dados do usuário autenticado
 async function loadProfile(userId: string) {
-  const { data, error } = await withTimeout(
-    Promise.resolve(supabase.from("profiles").select("*").eq("id", userId).maybeSingle()),
-    {
-      data: null,
-      error: null,
-      count: null,
-      status: 408,
-      statusText: "Timeout",
-      success: true,
-    },
-  );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .abortSignal(controller.signal)
+      .maybeSingle();
 
-  if (error) return null;
-  return data as ProfileRow | null;
+    if (error) throw error;
+    return data as ProfileRow | null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // traduz erros do supabase para mensagens mais úteis na tela
 function authErrorMessage(error: { message: string; code?: string; status?: number }) {
   const normalized = error.message.toLowerCase();
+
+  if (normalized.includes("invalid api key")) {
+    return "O acesso está temporariamente indisponível por um problema de configuração do aplicativo. Entre em contato com o suporte.";
+  }
 
   if (
     error.code === "invalid_credentials" ||
@@ -227,7 +232,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        const profile = await loadProfile(data.user.id);
+        let profile: ProfileRow | null;
+        try {
+          profile = await loadProfile(data.user.id);
+        } catch (error) {
+          console.warn("Falha ao consultar o perfil:", error);
+          await supabase.auth.signOut({ scope: "local" });
+          setUser(null);
+          setRole(null);
+          setLocation(emptyLocation);
+          return {
+            success: false,
+            message: "Sua conta foi autenticada, mas não foi possível carregar seu perfil. Tente novamente em instantes.",
+          };
+        }
         if (!profile) {
           await supabase.auth.signOut();
           setUser(null);
@@ -235,7 +253,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setLocation(emptyLocation);
           return {
             success: false,
-            message: "Sua conta não possui um perfil cadastrado. Acesso negado.",
+            message: "Sua conta foi autenticada, mas o perfil do aplicativo não foi encontrado ou não está acessível. Entre em contato com o suporte para regularizar o cadastro.",
           };
         }
 
