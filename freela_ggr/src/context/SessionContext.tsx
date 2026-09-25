@@ -15,20 +15,17 @@ type RegisterPayload = {
   services: string[];
 };
 
+type LoginResult = {
+  success: boolean;
+  message?: string;
+};
+
 type RegisterResult = {
   success: boolean;
   message?: string;
   pendingConfirmation?: boolean;
 };
 
-<<<<<<< HEAD
-type LoginResult = {
-  success: boolean;
-  message?: string;
-};
-
-=======
->>>>>>> origin/main
 type SessionContextValue = {
   role: Role | null;
   authScreen: AuthScreen;
@@ -36,11 +33,7 @@ type SessionContextValue = {
   user: User | null;
   loading: boolean;
   setLocation: (next: LocationValue) => void;
-<<<<<<< HEAD
   login: (payload: { role: Role; email: string; password: string }) => Promise<LoginResult>;
-=======
-  login: (payload: { role: Role; email: string; password: string }) => Promise<boolean>;
->>>>>>> origin/main
   logout: () => Promise<void>;
   openRegister: () => void;
   closeRegister: () => void;
@@ -59,6 +52,7 @@ type ProfileRow = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+// evita deixar a tela presa se o supabase demorar demais
 function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 5000) {
   return Promise.race([
     promise,
@@ -80,27 +74,33 @@ function profileToLocation(profile: ProfileRow | null): LocationValue {
   };
 }
 
+// busca o perfil que completa os dados do usuário autenticado
 async function loadProfile(userId: string) {
-  const { data, error } = await withTimeout(
-    Promise.resolve(supabase.from("profiles").select("*").eq("id", userId).maybeSingle()),
-    {
-      data: null,
-      error: null,
-      count: null,
-      status: 408,
-      statusText: "Timeout",
-      success: true,
-    },
-  );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .abortSignal(controller.signal)
+      .maybeSingle();
 
-  if (error) return null;
-  return data as ProfileRow | null;
+    if (error) throw error;
+    return data as ProfileRow | null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
+// traduz erros do supabase para mensagens mais úteis na tela
 function authErrorMessage(error: { message: string; code?: string; status?: number }) {
   const normalized = error.message.toLowerCase();
 
-<<<<<<< HEAD
+  if (normalized.includes("invalid api key")) {
+    return "O acesso está temporariamente indisponível por um problema de configuração do aplicativo. Entre em contato com o suporte.";
+  }
+
   if (
     error.code === "invalid_credentials" ||
     normalized.includes("invalid login credentials")
@@ -108,8 +108,6 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
     return "E-mail ou senha inválidos. Confira seus dados e tente novamente.";
   }
 
-=======
->>>>>>> origin/main
   if (normalized.includes("already") || normalized.includes("registered")) {
     return "Esse e-mail já está cadastrado. Tente entrar pelo login.";
   }
@@ -135,9 +133,10 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
     return `O Supabase recusou este e-mail: ${error.message}`;
   }
 
-  return `Cadastro não concluído: ${error.message}`;
+  return `Operação não concluída: ${error.message}`;
 }
 
+// salva os dados do onboarding na tabela de perfis
 async function saveProfile(userId: string, payload: RegisterPayload) {
   const { error } = await supabase.from("profiles").upsert({
     id: userId,
@@ -213,12 +212,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loading,
       setLocation,
       login: async ({ role: selectedRole, email, password }) => {
+        // o auth valida a senha, depois a gente confere o perfil no banco
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
 
-<<<<<<< HEAD
         if (error) {
           return {
             success: false,
@@ -233,7 +232,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        const profile = await loadProfile(data.user.id);
+        let profile: ProfileRow | null;
+        try {
+          profile = await loadProfile(data.user.id);
+        } catch (error) {
+          console.warn("Falha ao consultar o perfil:", error);
+          await supabase.auth.signOut({ scope: "local" });
+          setUser(null);
+          setRole(null);
+          setLocation(emptyLocation);
+          return {
+            success: false,
+            message: "Sua conta foi autenticada, mas não foi possível carregar seu perfil. Tente novamente em instantes.",
+          };
+        }
         if (!profile) {
           await supabase.auth.signOut();
           setUser(null);
@@ -241,10 +253,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setLocation(emptyLocation);
           return {
             success: false,
-            message: "Sua conta não possui um perfil cadastrado. Acesso negado.",
+            message: "Sua conta foi autenticada, mas o perfil do aplicativo não foi encontrado ou não está acessível. Entre em contato com o suporte para regularizar o cadastro.",
           };
         }
 
+        // impede entrar escolhendo o papel errado na tela inicial
         if (profile.role !== selectedRole) {
           await supabase.auth.signOut();
           setUser(null);
@@ -262,21 +275,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setAuthScreen("login");
 
         return { success: true };
-=======
-        if (error) return false;
-
-        setUser(data.user);
-        setRole(selectedRole);
-        setAuthScreen("login");
-
-        if (data.user) {
-          const profile = await loadProfile(data.user.id);
-          if (profile?.role) setRole(profile.role);
-          if (profile) setLocation(profileToLocation(profile));
-        }
-
-        return true;
->>>>>>> origin/main
       },
       logout: async () => {
         await supabase.auth.signOut();
@@ -288,6 +286,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       openRegister: () => setAuthScreen("register"),
       closeRegister: () => setAuthScreen("login"),
       completeRegister: async (payload) => {
+        // manda os dados junto do cadastro para o trigger criar o perfil
         const { data, error } = await supabase.auth.signUp({
           email: payload.email.trim(),
           password: payload.password,

@@ -74,7 +74,7 @@ const FORBIDDEN_PHRASES = [
   "massagem tantrica",
   "programa sexual",
   "servico sexual",
-  "conteudo pornografico",
+  "conteúdo pornografico",
 ];
 
 const FORBIDDEN_WORDS = [
@@ -101,7 +101,7 @@ const FORBIDDEN_WORDS = [
   "sicario",
   "trafico",
   "prostituta",
-  "prostituicao",
+  "prostituição",
   "acompanhante",
   "pornografia",
   "porno",

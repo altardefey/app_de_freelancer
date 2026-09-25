@@ -7,10 +7,12 @@ const supabaseUrl =
   process.env.EXPO_PUBLIC_SUPABASE_URL ??
   "https://yckfxydpokyvizvbjout.supabase.co";
 
-const supabaseAnonKey =
+// chave pública do aplicativo, pode ser definida pela variável de ambiente
+const supabasePublicKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlja2Z4eWRwb2t5dml6dmJqb3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MjY1MDYsImV4cCI6MjEwNTQwMjUwNn0.bi5d6FmjWQzmX485Ew0zoAw90zAj4RAlWyFAA2q4m3w";
+  "sb_publishable_ETA_Jjo0W-yCYpPoVDlu2w_XzEvYQ2V";
 
+// no servidor web não tem storage real, então fica um fallback vazio
 const memoryStorage = {
   getItem: async () => null,
   setItem: async () => undefined,
@@ -20,19 +22,11 @@ const memoryStorage = {
 const authStorage =
   typeof window === "undefined" ? memoryStorage : AsyncStorage;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabasePublicKey, {
   auth: {
-<<<<<<< HEAD
-    storage: AsyncStorage,
-=======
     storage: authStorage,
->>>>>>> origin/main
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> origin/main

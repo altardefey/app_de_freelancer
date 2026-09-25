@@ -22,6 +22,7 @@ export type BudgetStatus = "solicitado" | "pendente" | "realizado" | "recusado";
 
 export type Service = {
   id: string;
+  providerId: string | null;
   title: string;
   category: string;
   provider: string;

@@ -103,7 +103,7 @@ export const styles = StyleSheet.create({
     gap: 24,
   },
 
-  /* GLASSMORPHISM AQUI*/
+  /* vidro do card inicial */
   glassContainerLeft: {
     borderRadius: 24,
     overflow: "hidden",

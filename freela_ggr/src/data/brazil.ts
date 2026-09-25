@@ -91,7 +91,7 @@ export async function fetchCitiesByUf(uf: string): Promise<string[]> {
       return names;
     }
   } catch {
-    // usa lista local se a API do IBGE falhar
+    // usa lista local se a api do ibge falhar
   }
 
   const fallback = FALLBACK_CITIES[uf] ?? [];
