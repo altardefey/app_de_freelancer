@@ -240,6 +240,14 @@ export const styles = StyleSheet.create({
     borderColor: "rgba(248,113,113,0.28)",
     backgroundColor: "rgba(248,113,113,0.10)",
   },
+  resendConfirmation: {
+    color: "#CCFF00",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 12,
+    textAlign: "center",
+  },
   loginButtonWrap: {
     marginTop: 14,
     position: "relative",

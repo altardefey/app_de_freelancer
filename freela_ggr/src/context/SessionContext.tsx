@@ -34,6 +34,7 @@ type SessionContextValue = {
   loading: boolean;
   setLocation: (next: LocationValue) => void;
   login: (payload: { role: Role; email: string; password: string }) => Promise<LoginResult>;
+  resendConfirmation: (email: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   openRegister: () => void;
   closeRegister: () => void;
@@ -211,6 +212,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       setLocation,
+      resendConfirmation: async (email: string) => {
+        const { error } = await supabase.auth.resend({
+          email: email.trim(),
+          type: "signup",
+        });
+
+        if (error) {
+          return {
+            success: false,
+            message: authErrorMessage(error),
+          };
+        }
+        return {
+          success: true,
+          message: "Um novo e-mail de confirmação foi enviado.",
+        };
+      },
       login: async ({ role: selectedRole, email, password }) => {
         // o auth valida a senha, depois a gente confere o perfil no banco
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -219,6 +237,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         });
 
         if (error) {
+          if (error.code === "email_not_confirmed") {
+            return {
+              success: false,
+              message: "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.",
+            };
+          }
+
           return {
             success: false,
             message: authErrorMessage(error),

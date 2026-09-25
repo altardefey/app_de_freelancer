@@ -23,7 +23,7 @@ function isValidEmail(value: string) {
 
 export function LoginScreen() {
   const { width } = useWindowDimensions();
-  const { login, loading, openRegister } = useSession();
+  const { login, resendConfirmation, loading, openRegister } = useSession();
   const [loginRole, setLoginRole] = useState<Role | null>(null);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -172,6 +172,11 @@ export function LoginScreen() {
                     {submitting ? "Entrando..." : "Entrar"}
                   </Text>
                 </LoginActionButton>
+                <Pressable onPress={() => resendConfirmation(email)}>
+                  <Text style={styles.resendConfirmation}>
+                    Não recebeu o e-mail de confirmação?
+                  </Text>
+                </Pressable>
                 <Text style={styles.demoText}>
                   Use um e-mail e senha válidos.
                 </Text>
