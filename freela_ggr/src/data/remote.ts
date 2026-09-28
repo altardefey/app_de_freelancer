@@ -1,4 +1,9 @@
+import { Platform } from "react-native";
+import { webApi } from "../lib/webApi";
+import { BUDGET_COLUMNS, JOB_COLUMNS, SERVICE_COLUMNS } from "../security/columns";
+import { budgetInput, budgetStatus, rating as validRating, uuid } from "../security/validation";
 import type { Budget, BudgetStatus, CompletedJob, Service } from "../types/app";
+import { mutationError } from "../lib/requestErrors";
 import { supabase } from "../lib/supabase";
 
 type ServiceRow = {
@@ -112,13 +117,14 @@ async function currentUserId() {
 }
 
 export async function listServices(): Promise<Service[]> {
+  if (Platform.OS === "web") return (await webApi<ServiceRow[]>("services")).map(mapService);
   const { data, error } = await supabase
     .from("services")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select(SERVICE_COLUMNS)
+    .order("created_at", { ascending: false }).limit(100);
 
   if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar serviços:", error.message);
+    if (!isMissingTable(error)) console.warn("Erro ao listar serviços:");
     return [];
   }
 
@@ -127,13 +133,14 @@ export async function listServices(): Promise<Service[]> {
 }
 
 export async function listBudgets(): Promise<Budget[]> {
+  if (Platform.OS === "web") return (await webApi<BudgetRow[]>("budgets")).map(mapBudget);
   const { data, error } = await supabase
     .from("budgets")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select(BUDGET_COLUMNS)
+    .order("created_at", { ascending: false }).limit(100);
 
   if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar orçamentos:", error.message);
+    if (!isMissingTable(error)) console.warn("Erro ao listar orçamentos:");
     return [];
   }
 
@@ -142,13 +149,14 @@ export async function listBudgets(): Promise<Budget[]> {
 }
 
 export async function listCompletedJobs(): Promise<CompletedJob[]> {
+  if (Platform.OS === "web") return (await webApi<CompletedJobRow[]>("jobs")).map(mapCompletedJob);
   const { data, error } = await supabase
     .from("completed_jobs")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select(JOB_COLUMNS)
+    .order("created_at", { ascending: false }).limit(100);
 
   if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar serviços concluídos:", error.message);
+    if (!isMissingTable(error)) console.warn("Erro ao listar serviços concluídos:");
     return [];
   }
 
@@ -163,52 +171,41 @@ export async function createBudget(
     status?: BudgetStatus;
   },
 ): Promise<Budget> {
-  // mantém a interface funcionando mesmo se o banco falhar
-  const optimistic: Budget = {
-    id: `local-${Date.now()}`,
-    client: payload.client,
-    service: payload.service,
-    value: payload.value,
-    date: "Hoje",
-    status: payload.status ?? "solicitado",
-  };
-
+  const input = budgetInput(payload);
+  if (Platform.OS === "web") {
+    try { return mapBudget(await webApi<BudgetRow>("createBudget", payload)); }
+    catch (error) { throw mutationError(error as { message?: string }); }
+  }
   const userId = await currentUserId();
+  if (!userId) throw new Error("Entre na sua conta para enviar uma solicitação.");
   // liga o orçamento ao cliente e ao profissional, quando existir
   const { data, error } = await supabase
     .from("budgets")
-    .insert({
-      user_id: userId,
-      professional_id: payload.professionalId ?? null,
-      client: optimistic.client,
-      service: optimistic.service,
-      value: optimistic.value,
-      status: optimistic.status,
-      whatsapp: payload.whatsapp ?? null,
-    })
-    .select("*")
+    .insert({ ...input, user_id: userId })
+    .select(BUDGET_COLUMNS)
     .single();
 
-  if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao criar orçamento:", error.message);
-    return optimistic;
-  }
-
-  return data ? mapBudget(data as BudgetRow) : optimistic;
+  if (error) throw mutationError(error);
+  if (!data) throw new Error("Não foi possível confirmar o envio. Tente novamente.");
+  return mapBudget(data as BudgetRow);
 }
 
 export async function updateBudgetStatus(id: string, status: BudgetStatus) {
-  if (id.startsWith("local-")) return;
-  const { error } = await supabase.from("budgets").update({ status }).eq("id", id);
-  if (error && !isMissingTable(error)) {
-    console.warn("Erro ao atualizar orçamento:", error.message);
+  uuid(id); budgetStatus(status);
+  if (Platform.OS === "web") {
+    try { await webApi("budgetStatus", { id, status }); return; }
+    catch (error) { throw mutationError(error as { message?: string }); }
   }
+  const { error } = await supabase.from("budgets").update({ status }).eq("id", id).select("id").single();
+  if (error) throw mutationError(error);
 }
 
 export async function updateJobRating(id: string, rating: number) {
-  if (id.startsWith("local-")) return;
-  const { error } = await supabase.from("completed_jobs").update({ rating }).eq("id", id);
-  if (error && !isMissingTable(error)) {
-    console.warn("Erro ao avaliar serviço:", error.message);
+  uuid(id); validRating(rating);
+  if (Platform.OS === "web") {
+    try { await webApi("rating", { id, rating }); return; }
+    catch (error) { throw mutationError(error as { message?: string }); }
   }
+  const { error } = await supabase.from("completed_jobs").update({ rating }).eq("id", id).select("id").single();
+  if (error) throw mutationError(error);
 }

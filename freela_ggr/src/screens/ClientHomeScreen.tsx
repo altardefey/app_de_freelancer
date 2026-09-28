@@ -87,6 +87,8 @@ export function ClientHomeScreen() {
       if (!active) return;
       setCatalogServices(services);
       setCompletedJobs(jobs);
+    }).catch(() => {
+      if (active) Alert.alert("Não foi possível carregar", "Tente entrar novamente em instantes.");
     });
     return () => {
       active = false;
@@ -134,22 +136,26 @@ export function ClientHomeScreen() {
   }
 
   async function sendServiceRequest() {
-    if (!selectedService) return;
+    if (!selectedService || sendingRequest) return;
 
     setSendingRequest(true);
-    // salva o pedido no banco com o profissional do serviço escolhido
-    await createBudget({
-      client: "Cliente do app",
-      service: selectedService.title,
-      value: selectedService.price,
-      professionalId: selectedService.providerId,
-      status: "solicitado",
-    });
-    setSendingRequest(false);
-    setAttachmentUri(null);
-    setRequestDetails("");
-    setSelectedService(null);
-    Alert.alert("Solicitação enviada", "O pedido foi salvo no Supabase e enviado ao profissional.");
+    try {
+      await createBudget({
+        client: "Cliente do app",
+        service: selectedService.title,
+        value: selectedService.price,
+        professionalId: selectedService.providerId,
+        status: "solicitado",
+      });
+      setAttachmentUri(null);
+      setRequestDetails("");
+      setSelectedService(null);
+      Alert.alert("Solicitação enviada", "O pedido foi salvo e enviado ao profissional.");
+    } catch (error) {
+      Alert.alert("Solicitação não enviada", error instanceof Error ? error.message : "Tente novamente em instantes.");
+    } finally {
+      setSendingRequest(false);
+    }
   }
 
   async function attachImage() {
@@ -164,14 +170,26 @@ export function ClientHomeScreen() {
       allowsEditing: true,
       quality: 0.8,
     });
-    if (!result.canceled) setAttachmentUri(result.assets[0].uri);
+    if (!result.canceled) {
+      const file = result.assets[0];
+      if (!file.mimeType || !["image/jpeg", "image/png", "image/webp"].includes(file.mimeType) ||
+          !file.fileSize || file.fileSize > 5 * 1024 * 1024 || file.width * file.height > 20000000) {
+        Alert.alert("Imagem não aceita", "Escolha JPG, PNG ou WebP de até 5 MB e 20 megapixels.");
+        return;
+      }
+      setAttachmentUri(file.uri);
+    }
   }
 
   async function rateJob(id: string, rating: number) {
-    setCompletedJobs((current) =>
-      current.map((job) => (job.id === id ? { ...job, rating } : job)),
-    );
-    await updateJobRating(id, rating);
+    try {
+      await updateJobRating(id, rating);
+      setCompletedJobs((current) =>
+        current.map((job) => (job.id === id ? { ...job, rating } : job)),
+      );
+    } catch (error) {
+      Alert.alert("Avaliação não salva", error instanceof Error ? error.message : "Tente novamente em instantes.");
+    }
   }
 
   const locationLabel = location.neighborhood

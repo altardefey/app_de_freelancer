@@ -41,3 +41,10 @@ example
 # generated native folders
 /ios
 /android
+
+# configurações e credenciais ficam fora do git
+.env
+.env.*
+!.env.example
+.vercel/
+security-scan-results/

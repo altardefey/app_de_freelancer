@@ -27,6 +27,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { BotCheck } from "../components/BotCheck";
 import { AnimatedCheckbox } from "../components/AnimatedCheckbox";
 import { LocationFields } from "../components/LocationFields";
 import { LoginOrbs } from "../components/LoginOrbs";
@@ -76,8 +77,8 @@ const FLOATING_ICONS: {
 const PASSWORD_RULES = [
   {
     key: "length",
-    label: "Pelo menos 8 caracteres",
-    test: (value: string) => value.length >= 8,
+    label: "De 12 a 72 caracteres",
+    test: (value: string) => value.length >= 12 && value.length <= 72,
   },
   {
     key: "case",
@@ -371,6 +372,8 @@ export function RegisterOnboarding() {
   const [passwordRulesShake, setPasswordRulesShake] = useState(0);
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string>();
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [saving, setSaving] = useState(false);
   const animatedIndex = useSharedValue(0);
   const steppedAhead = useSharedValue(0);
@@ -474,6 +477,7 @@ export function RegisterOnboarding() {
   }
 
   async function handleContinue() {
+    if (saving) return;
     if (!canContinue()) {
       showMissingFeedback();
       return;
@@ -483,6 +487,7 @@ export function RegisterOnboarding() {
       return;
     }
     if (!role) return;
+    if (process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) { setRegisterError("Conclua a verificação de segurança."); return; }
     // junta opções do catálogo com o campo livre de outro
     const services = selectedServices
       .filter((item) => item !== OTHER_SERVICE_LABEL)
@@ -498,8 +503,10 @@ export function RegisterOnboarding() {
       password,
       whatsapp,
       services,
+      captchaToken,
     });
     setSaving(false);
+    setCaptchaReset(value => value + 1);
 
     if (!result.success) {
       setRegisterError(result.message ?? "Cadastro não concluído. Confira os dados ou tente usar outro e-mail.");
@@ -727,6 +734,7 @@ export function RegisterOnboarding() {
                     />
                   ))}
                 </View>
+                <BotCheck onToken={setCaptchaToken} resetKey={captchaReset} />
                 {registerError ? <Text style={styles.registerError}>{registerError}</Text> : null}
                 {registerSuccess ? (
                   <Text style={styles.registerSuccess}>{registerSuccess}</Text>

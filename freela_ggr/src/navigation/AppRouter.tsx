@@ -5,13 +5,13 @@ import { ProfessionalHomeScreen } from "../screens/ProfessionalHomeScreen";
 import { RegisterOnboarding } from "../screens/RegisterOnboarding";
 
 function AppFlow() {
-  const { role, authScreen } = useSession();
+  const { role, authScreen, user } = useSession();
 
   if (!role) {
     return authScreen === "register" ? <RegisterOnboarding /> : <LoginScreen />;
   }
 
-  return role === "cliente" ? <ClientHomeScreen /> : <ProfessionalHomeScreen />;
+  return role === "cliente" ? <ClientHomeScreen key={user?.id} /> : <ProfessionalHomeScreen key={user?.id} />;
 }
 
 export function AppRouter() {

@@ -109,10 +109,7 @@ Esse schema cria:
 
 Em desenvolvimento, o Supabase pode bloquear novos cadastros por limite de envio de e-mails (`email rate limit exceeded`). Isso acontece antes de criar o usuário em `Authentication > Users`.
 
-Para continuar testando, existem duas opções:
-
-- aguardar o limite temporário liberar;
-- desativar temporariamente a confirmação por e-mail em `Authentication > Sign In / Providers > Email`.
+Para continuar testando, aguarde o limite liberar ou configure um SMTP próprio com a cota adequada. Mantenha a confirmação por e-mail ativada.
 
 ## Scripts úteis
 
@@ -184,3 +181,11 @@ supabase/
 ## Licença
 
 Veja o arquivo `LICENSE`.
+
+## Rate limit
+
+Depois do schema base, aplique `supabase/rate-limits.sql` no SQL Editor. Os limites de gravação e a configuração separada do Supabase Auth estão em [supabase/RATE_LIMITS.md](supabase/RATE_LIMITS.md). Apenas atualizar o app não ativa os limites no banco.
+
+## Segurança e publicação
+
+Veja [SECURITY_REVIEW.md](SECURITY_REVIEW.md) para a revisão, SQL de restrições, configuração do Supabase/Turnstile/Vercel e pendências. A web agora usa uma API com cookies HttpOnly; rode `npm run web` para testar com o servidor local.

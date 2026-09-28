@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { User } from "@supabase/supabase-js";
+import { Platform } from "react-native";
+import { auth, type AppUser as User } from "../lib/auth";
+import { webApi } from "../lib/webApi";
+import { PROFILE_COLUMNS } from "../security/columns";
 
+import { rateLimitMessage } from "../lib/requestErrors";
 import { supabase } from "../lib/supabase";
 import { emptyLocation, type LocationValue, type Role } from "../types/app";
 
@@ -13,6 +17,7 @@ type RegisterPayload = {
   password: string;
   whatsapp: string;
   services: string[];
+  captchaToken?: string;
 };
 
 type LoginResult = {
@@ -33,8 +38,8 @@ type SessionContextValue = {
   user: User | null;
   loading: boolean;
   setLocation: (next: LocationValue) => void;
-  login: (payload: { role: Role; email: string; password: string }) => Promise<LoginResult>;
-  resendConfirmation: (email: string) => Promise<LoginResult>;
+  login: (payload: { role: Role; email: string; password: string; captchaToken?: string }) => Promise<LoginResult>;
+  resendConfirmation: (email: string, captchaToken?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   openRegister: () => void;
   closeRegister: () => void;
@@ -77,12 +82,13 @@ function profileToLocation(profile: ProfileRow | null): LocationValue {
 
 // busca o perfil que completa os dados do usuário autenticado
 async function loadProfile(userId: string) {
+  if (Platform.OS === "web") return webApi<ProfileRow | null>("profile");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select(PROFILE_COLUMNS)
       .eq("id", userId)
       .abortSignal(controller.signal)
       .maybeSingle();
@@ -96,6 +102,8 @@ async function loadProfile(userId: string) {
 
 // traduz erros do supabase para mensagens mais úteis na tela
 function authErrorMessage(error: { message: string; code?: string; status?: number }) {
+  const limited = rateLimitMessage(error);
+  if (limited) return limited;
   const normalized = error.message.toLowerCase();
 
   if (normalized.includes("invalid api key")) {
@@ -119,11 +127,7 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
     normalized.includes("disabled") ||
     normalized.includes("not allowed")
   ) {
-    return "O cadastro por e-mail parece estar desativado no Supabase. Vá em Authentication > Providers > Email e ative o provedor de e-mail e o cadastro de novos usuários.";
-  }
-
-  if (normalized.includes("rate limit")) {
-    return "O Supabase atingiu o limite temporário de envio de e-mails deste projeto. Para testar agora, desative a confirmação por e-mail em Authentication > Providers > Email ou aguarde o limite liberar.";
+    return "O cadastro está temporariamente indisponível. Tente novamente mais tarde.";
   }
 
   if (normalized.includes("password")) {
@@ -131,28 +135,10 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
   }
 
   if (normalized.includes("email")) {
-    return `O Supabase recusou este e-mail: ${error.message}`;
+    return "Não foi possível usar esse e-mail. Confira os dados e tente novamente.";
   }
 
-  return `Operação não concluída: ${error.message}`;
-}
-
-// salva os dados do onboarding na tabela de perfis
-async function saveProfile(userId: string, payload: RegisterPayload) {
-  const { error } = await supabase.from("profiles").upsert({
-    id: userId,
-    role: payload.role,
-    cep: payload.location.cep,
-    street: payload.location.street,
-    neighborhood: payload.location.neighborhood,
-    uf: payload.location.uf,
-    state_name: payload.location.stateName,
-    city: payload.location.city,
-    whatsapp: payload.whatsapp.replace(/\D/g, ""),
-    services: payload.services,
-  });
-
-  return { success: !error, message: error?.message };
+  return "Não foi possível concluir a operação. Tente novamente em instantes.";
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -168,10 +154,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     async function hydrate() {
       try {
         const { data } = await withTimeout(
-          supabase.auth.getSession(),
-          { data: { session: null }, error: null },
+          auth.getUser(),
+          { data: { user: null }, error: null },
         );
-        const currentUser = data.session?.user ?? null;
+        const currentUser = data.user ?? null;
         if (!mounted) return;
         setUser(currentUser);
 
@@ -182,7 +168,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setLocation(profileToLocation(profile));
         }
       } catch (error) {
-        console.warn("Não foi possível carregar a sessão:", error);
+        console.warn("Não foi possível carregar a sessão.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -190,7 +176,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     hydrate();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setRole(null);
@@ -212,10 +198,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       setLocation,
-      resendConfirmation: async (email: string) => {
-        const { error } = await supabase.auth.resend({
+      resendConfirmation: async (email: string, captchaToken?: string) => {
+        const { error } = await auth.resend({
           email: email.trim(),
           type: "signup",
+          options: { captchaToken },
         });
 
         if (error) {
@@ -229,11 +216,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           message: "Um novo e-mail de confirmação foi enviado.",
         };
       },
-      login: async ({ role: selectedRole, email, password }) => {
+      login: async ({ role: selectedRole, email, password, captchaToken }) => {
         // o auth valida a senha, depois a gente confere o perfil no banco
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await auth.signInWithPassword({
           email: email.trim(),
           password,
+          options: { captchaToken },
         });
 
         if (error) {
@@ -261,8 +249,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         try {
           profile = await loadProfile(data.user.id);
         } catch (error) {
-          console.warn("Falha ao consultar o perfil:", error);
-          await supabase.auth.signOut({ scope: "local" });
+          console.warn("Falha ao consultar o perfil.");
+          await auth.signOut({ scope: "local" });
           setUser(null);
           setRole(null);
           setLocation(emptyLocation);
@@ -272,7 +260,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           };
         }
         if (!profile) {
-          await supabase.auth.signOut();
+          await auth.signOut();
           setUser(null);
           setRole(null);
           setLocation(emptyLocation);
@@ -284,7 +272,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         // impede entrar escolhendo o papel errado na tela inicial
         if (profile.role !== selectedRole) {
-          await supabase.auth.signOut();
+          await auth.signOut();
           setUser(null);
           setRole(null);
           setLocation(emptyLocation);
@@ -302,7 +290,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return { success: true };
       },
       logout: async () => {
-        await supabase.auth.signOut();
+        await auth.signOut();
         setUser(null);
         setRole(null);
         setLocation(emptyLocation);
@@ -312,10 +300,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       closeRegister: () => setAuthScreen("login"),
       completeRegister: async (payload) => {
         // manda os dados junto do cadastro para o trigger criar o perfil
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await auth.signUp({
           email: payload.email.trim(),
           password: payload.password,
           options: {
+            captchaToken: payload.captchaToken,
             data: {
               role: payload.role,
               cep: payload.location.cep,
@@ -343,25 +332,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        if (signedUser && !data.session) {
+        if (!data.session) {
           return {
             success: true,
             pendingConfirmation: true,
             message:
-              "Cadastro criado. Agora confirme o e-mail pelo link que o Supabase enviou e depois entre pelo login.",
+              "Se o cadastro puder ser concluído, você receberá um e-mail de confirmação. Confira sua caixa de entrada.",
           };
         }
 
-        if (signedUser) {
-          const profile = await saveProfile(signedUser.id, payload);
-          if (!profile.success) {
-            return {
-              success: false,
-              message:
-                "A conta foi criada, mas o perfil não foi salvo. Confirme o e-mail e tente entrar pelo login.",
-            };
-          }
-        }
 
         setUser(signedUser);
         setLocation(payload.location);

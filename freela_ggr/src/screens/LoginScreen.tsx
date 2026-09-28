@@ -12,6 +12,7 @@ import {
 
 import { LoginActionButton } from "../components/LoginActionButton";
 import { LoginOrbs } from "../components/LoginOrbs";
+import { BotCheck } from "../components/BotCheck";
 import { Logo } from "../components/Logo";
 import { useSession } from "../context/SessionContext";
 import type { Role } from "../types/app";
@@ -30,10 +31,13 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string>();
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleLogin() {
-    if (!loginRole) return;
+    if (!loginRole || submitting) return;
+    if (process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) { setFormError("Conclua a verificação de segurança."); return; }
     setFormError("");
 
     if (!isValidEmail(email)) {
@@ -47,7 +51,8 @@ export function LoginScreen() {
     }
 
     setSubmitting(true);
-    const result = await login({ role: loginRole, email, password });
+    const result = await login({ role: loginRole, email, password, captchaToken });
+    setCaptchaReset(value => value + 1);
     setSubmitting(false);
 
     if (!result.success) {
@@ -167,12 +172,20 @@ export function LoginScreen() {
                 />
                 {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
                 {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+                <BotCheck onToken={setCaptchaToken} resetKey={captchaReset} />
                 <LoginActionButton variant="lime" onPress={handleLogin}>
                   <Text style={styles.loginPrimaryButtonText}>
                     {submitting ? "Entrando..." : "Entrar"}
                   </Text>
                 </LoginActionButton>
-                <Pressable onPress={() => resendConfirmation(email)}>
+                <Pressable onPress={async () => {
+                  if (submitting) return;
+                  setSubmitting(true);
+                  const result = await resendConfirmation(email, captchaToken);
+                  setFormError(result.message ?? "Confira seu e-mail.");
+                  setCaptchaReset(value => value + 1);
+                  setSubmitting(false);
+                }}>
                   <Text style={styles.resendConfirmation}>
                     Não recebeu o e-mail de confirmação?
                   </Text>

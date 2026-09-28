@@ -33,6 +33,8 @@ export function ProfessionalHomeScreen() {
     let active = true;
     listBudgets().then((items) => {
       if (active) setBudgets(items);
+    }).catch(() => {
+      if (active) Alert.alert("Não foi possível carregar", "Tente entrar novamente em instantes.");
     });
     return () => {
       active = false;
@@ -49,10 +51,14 @@ export function ProfessionalHomeScreen() {
   };
 
   async function updateBudget(id: string, status: BudgetStatus) {
-    setBudgets((current) =>
-      current.map((budget) => (budget.id === id ? { ...budget, status } : budget)),
-    );
-    await updateBudgetStatus(id, status);
+    try {
+      await updateBudgetStatus(id, status);
+      setBudgets((current) =>
+        current.map((budget) => (budget.id === id ? { ...budget, status } : budget)),
+      );
+    } catch (error) {
+      Alert.alert("Orçamento não atualizado", error instanceof Error ? error.message : "Tente novamente em instantes.");
+    }
   }
 
   return (

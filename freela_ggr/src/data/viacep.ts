@@ -53,7 +53,7 @@ export async function searchNeighborhoods(
   query: string,
 ): Promise<string[]> {
   const term = query.trim();
-  if (!uf || !city || term.length < 2) return [];
+  if (!BRAZIL_STATES.some(state => state.uf === uf) || !city || city.length > 120 || term.length < 2 || term.length > 120) return [];
 
   const url = `https://viacep.com.br/ws/${uf}/${encodeURIComponent(city)}/${encodeURIComponent(term)}/json/`;
   const resposta = await fetch(url);
