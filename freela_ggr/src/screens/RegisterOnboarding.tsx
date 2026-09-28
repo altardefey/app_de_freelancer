@@ -77,8 +77,8 @@ const FLOATING_ICONS: {
 const PASSWORD_RULES = [
   {
     key: "length",
-    label: "De 12 a 72 caracteres",
-    test: (value: string) => value.length >= 12 && value.length <= 72,
+    label: "De 12 a 32 caracteres",
+    test: (value: string) => value.length >= 12 && value.length <= 32,
   },
   {
     key: "case",

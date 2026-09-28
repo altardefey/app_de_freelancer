@@ -24,12 +24,13 @@ export function email(value: unknown): string {
   return clean;
 }
 export function password(value: unknown, signup = false): string {
+  const maxPasswordLength = 32;
   // a senha não passa por trim pra não mudar o que a pessoa digitou
-  if (typeof value !== "string" || !value.length || value.length > 72 ||
+  if (typeof value !== "string" || !value.length || value.length > maxPasswordLength ||
       (signup && (value.length < 12 || !/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value) || !/[^A-Za-z0-9]/.test(value)))) {
-    throw new InputError("Use uma senha de 12 a 72 caracteres com maiúscula, minúscula, número e símbolo.");
+    throw new InputError(`Use uma senha de 12 a ${maxPasswordLength} caracteres com maiúscula, minúscula, número e símbolo.`);
   }
-  if (new TextEncoder().encode(value).length > 72) throw new InputError("A senha é longa demais. Use até 72 bytes.");
+  if (new TextEncoder().encode(value).length > maxPasswordLength) throw new InputError(`A senha é longa demais. Use até ${maxPasswordLength} bytes.`);
   return value;
 }
 export function profileMetadata(value: unknown) {
