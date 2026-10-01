@@ -1,8 +1,6 @@
-import * as ImagePicker from "expo-image-picker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -18,8 +16,8 @@ import { ReportServiceButton } from "../components/ReportServiceButton";
 import { ServiceRating } from "../components/ServiceRating";
 import { useSession } from "../context/SessionContext";
 import { buildCatalogDictionary, serviceCategories } from "../data/catalog";
-import { createBudget, listCompletedJobs, listServices, updateJobRating } from "../data/remote";
-import type { CompletedJob, Service } from "../types/app";
+import { createBudget, listBudgets, listCompletedJobs, listServices, updateBudgetStatus, updateJobRating } from "../data/remote";
+import type { Budget, BudgetStatus, CompletedJob, Service } from "../types/app";
 import { distance, normalize } from "../utils/searchTools";
 import { styles } from "./HomeScreen.styles";
 
@@ -65,11 +63,11 @@ export function ClientHomeScreen() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [attachmentUri, setAttachmentUri] = useState<string | null>(null);
   const [requestDetails, setRequestDetails] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [catalogServices, setCatalogServices] = useState<Service[]>([]);
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   // cria uma lista simples de termos para sugerir buscas parecidas
   const catalogDictionary = useMemo(
     () => buildCatalogDictionary(catalogServices),
@@ -83,10 +81,11 @@ export function ClientHomeScreen() {
   useEffect(() => {
     // carrega só dados reais do banco para não mostrar avaliação fake
     let active = true;
-    Promise.all([listServices(), listCompletedJobs()]).then(([services, jobs]) => {
+    Promise.all([listServices(), listCompletedJobs(), listBudgets()]).then(([services, jobs, requests]) => {
       if (!active) return;
       setCatalogServices(services);
       setCompletedJobs(jobs);
+      setBudgets(requests);
     }).catch(() => {
       if (active) Alert.alert("Não foi possível carregar", "Tente entrar novamente em instantes.");
     });
@@ -130,24 +129,28 @@ export function ClientHomeScreen() {
   const recent = locatedServices.filter((service) => service.recent);
 
   function openService(service: Service) {
-    setAttachmentUri(null);
     setRequestDetails("");
     setSelectedService(service);
   }
 
   async function sendServiceRequest() {
     if (!selectedService || sendingRequest) return;
+    if (!selectedService.providerId) {
+      Alert.alert("Profissional indisponível", "Este anúncio ainda não está vinculado a um profissional ativo.");
+      return;
+    }
 
     setSendingRequest(true);
     try {
-      await createBudget({
+      const request = await createBudget({
         client: "Cliente do app",
         service: selectedService.title,
         value: selectedService.price,
+        serviceId: selectedService.id,
         professionalId: selectedService.providerId,
-        status: "solicitado",
+        details: requestDetails.trim(),
       });
-      setAttachmentUri(null);
+      setBudgets((current) => [request, ...current]);
       setRequestDetails("");
       setSelectedService(null);
       Alert.alert("Solicitação enviada", "O pedido foi salvo e enviado ao profissional.");
@@ -155,29 +158,6 @@ export function ClientHomeScreen() {
       Alert.alert("Solicitação não enviada", error instanceof Error ? error.message : "Tente novamente em instantes.");
     } finally {
       setSendingRequest(false);
-    }
-  }
-
-  async function attachImage() {
-    // pede permissão antes de abrir a galeria do dispositivo
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permissão necessária", "Permita o acesso às fotos para anexar uma imagem.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      const file = result.assets[0];
-      if (!file.mimeType || !["image/jpeg", "image/png", "image/webp"].includes(file.mimeType) ||
-          !file.fileSize || file.fileSize > 5 * 1024 * 1024 || file.width * file.height > 20000000) {
-        Alert.alert("Imagem não aceita", "Escolha JPG, PNG ou WebP de até 5 MB e 20 megapixels.");
-        return;
-      }
-      setAttachmentUri(file.uri);
     }
   }
 
@@ -189,6 +169,15 @@ export function ClientHomeScreen() {
       );
     } catch (error) {
       Alert.alert("Avaliação não salva", error instanceof Error ? error.message : "Tente novamente em instantes.");
+    }
+  }
+
+  async function respondToBudget(id: string, status: BudgetStatus) {
+    try {
+      await updateBudgetStatus(id, status);
+      setBudgets((current) => current.map((budget) => budget.id === id ? { ...budget, status } : budget));
+    } catch (error) {
+      Alert.alert("Resposta não salva", error instanceof Error ? error.message : "Tente novamente em instantes.");
     }
   }
 
@@ -273,6 +262,18 @@ export function ClientHomeScreen() {
         )}
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Meus pedidos</Text>
+          {budgets.length ? budgets.map((budget) => (
+            <ClientBudgetCard key={budget.id} budget={budget} onRespond={respondToBudget} />
+          )) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Nenhum pedido enviado</Text>
+              <Text style={styles.emptyText}>Suas solicitações e propostas aparecerão aqui.</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Serviços concluídos</Text>
           {completedJobs.length ? (
             completedJobs.map((job) => (
@@ -301,6 +302,9 @@ export function ClientHomeScreen() {
             <Text style={styles.modalProvider}>
               {selectedService?.provider} · a partir de {selectedService?.price}
             </Text>
+            {!selectedService?.providerId ? (
+              <Text style={styles.formError}>Este anúncio não está vinculado a um profissional e não aceita pedidos.</Text>
+            ) : null}
             <TextInput
               value={requestDetails}
               onChangeText={setRequestDetails}
@@ -309,20 +313,10 @@ export function ClientHomeScreen() {
               placeholderTextColor="#71717A"
               style={[styles.input, styles.messageInput]}
             />
-            <Pressable style={styles.attachButton} onPress={attachImage}>
-              <Feather name="paperclip" size={17} color="#18181B" />
-              <Text style={styles.attachText}>
-                {attachmentUri ? "Imagem anexada" : "Anexar imagem"}
-              </Text>
-            </Pressable>
-            {attachmentUri ? (
-              <Image source={{ uri: attachmentUri }} style={styles.attachmentPreview} />
-            ) : null}
             <View style={styles.modalActions}>
               <Pressable
                 style={styles.cancelButton}
                 onPress={() => {
-                  setAttachmentUri(null);
                   setSelectedService(null);
                 }}
               >
@@ -330,7 +324,7 @@ export function ClientHomeScreen() {
               </Pressable>
               <Pressable
                 style={styles.primaryButtonSmall}
-                disabled={sendingRequest}
+                disabled={sendingRequest || !selectedService?.providerId}
                 onPress={sendServiceRequest}
               >
                 <Text style={styles.primaryButtonText}>
@@ -341,6 +335,55 @@ export function ClientHomeScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function ClientBudgetCard({
+  budget,
+  onRespond,
+}: {
+  budget: Budget;
+  onRespond: (id: string, status: BudgetStatus) => void;
+}) {
+  const labels: Record<BudgetStatus, string> = {
+    solicitado: "Aguardando proposta",
+    cotado: "Proposta recebida",
+    aceito: "Aguardando início",
+    em_andamento: "Em andamento",
+    realizado: "Concluído",
+    recusado: "Recusado",
+    cancelado: "Cancelado",
+  };
+  return (
+    <View style={styles.budgetCard}>
+      <View style={styles.cardTop}>
+        <View>
+          <Text style={styles.budgetService}>{budget.service}</Text>
+          <Text style={styles.budgetDate}>{budget.date}</Text>
+        </View>
+        <Text style={[styles.status, styles[`status${budget.status}`]]}>{labels[budget.status]}</Text>
+      </View>
+      {budget.details ? <Text style={styles.budgetDate}>{budget.details}</Text> : null}
+      <Text style={styles.budgetValue}>
+        {budget.quoteAmount == null ? `Valor inicial: ${budget.value}` : `Proposta: ${budget.value}`}
+      </Text>
+      {budget.quoteMessage ? <Text style={styles.budgetDate}>{budget.quoteMessage}</Text> : null}
+      {budget.status === "cotado" ? (
+        <View style={styles.actionRow}>
+          <Pressable onPress={() => onRespond(budget.id, "aceito")}>
+            <Text style={styles.actionText}>Aceitar</Text>
+          </Pressable>
+          <Pressable onPress={() => onRespond(budget.id, "recusado")}>
+            <Text style={styles.actionTextMuted}>Recusar proposta</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {["solicitado", "cotado", "aceito"].includes(budget.status) ? (
+        <Pressable onPress={() => onRespond(budget.id, "cancelado")}>
+          <Text style={styles.actionTextMuted}>Cancelar pedido</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

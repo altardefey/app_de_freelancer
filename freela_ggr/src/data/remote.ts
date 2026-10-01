@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import { webApi } from "../lib/webApi";
 import { BUDGET_COLUMNS, JOB_COLUMNS, SERVICE_COLUMNS } from "../security/columns";
-import { budgetInput, budgetStatus, rating as validRating, uuid } from "../security/validation";
+import { budgetInput, budgetStatus, quoteInput, rating as validRating, uuid } from "../security/validation";
 import type { Budget, BudgetStatus, CompletedJob, Service } from "../types/app";
 import { mutationError } from "../lib/requestErrors";
 import { supabase } from "../lib/supabase";
@@ -29,6 +29,9 @@ type BudgetRow = {
   value?: string | number | null;
   date?: string | null;
   status?: BudgetStatus | null;
+  details?: string | null;
+  quote_amount?: number | string | null;
+  quote_message?: string | null;
   created_at?: string | null;
 };
 
@@ -80,13 +83,17 @@ function mapService(row: ServiceRow): Service {
 }
 
 function mapBudget(row: BudgetRow): Budget {
+  const quoteAmount = row.quote_amount == null ? null : Number(row.quote_amount);
   return {
     id: String(row.id),
     client: row.client || "Cliente",
     service: row.service || "Serviço",
-    value: formatCurrency(row.value),
+    value: formatCurrency(quoteAmount ?? row.value),
     date: row.date || formatDate(row.created_at),
     status: row.status || "solicitado",
+    details: row.details ?? null,
+    quoteAmount,
+    quoteMessage: row.quote_message ?? null,
   };
 }
 
@@ -166,6 +173,7 @@ export async function listCompletedJobs(): Promise<CompletedJob[]> {
 
 export async function createBudget(
   payload: Omit<Budget, "id" | "date" | "status"> & {
+    serviceId: string;
     professionalId?: string | null;
     whatsapp?: string;
     status?: BudgetStatus;
@@ -188,6 +196,20 @@ export async function createBudget(
   if (error) throw mutationError(error);
   if (!data) throw new Error("Não foi possível confirmar o envio. Tente novamente.");
   return mapBudget(data as BudgetRow);
+}
+
+export async function submitBudgetQuote(id: string, quoteAmount: number, quoteMessage = "") {
+  const quote = quoteInput({ id, quoteAmount, quoteMessage });
+  if (Platform.OS === "web") {
+    try { await webApi("budgetQuote", { id, quoteAmount, quoteMessage }); return; }
+    catch (error) { throw mutationError(error as { message?: string }); }
+  }
+  const { error } = await supabase.from("budgets").update({
+    status: "cotado",
+    quote_amount: quote.quote_amount,
+    quote_message: quote.quote_message,
+  }).eq("id", quote.id).select("id").single();
+  if (error) throw mutationError(error);
 }
 
 export async function updateBudgetStatus(id: string, status: BudgetStatus) {

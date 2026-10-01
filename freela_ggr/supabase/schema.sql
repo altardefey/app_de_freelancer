@@ -36,12 +36,16 @@ create table if not exists public.budgets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   professional_id uuid references public.profiles(id) on delete set null,
+  service_id uuid references public.services(id) on delete set null,
   client text not null,
   service text not null,
   value text not null,
+  details text,
+  quote_amount numeric(10, 2),
+  quote_message text,
   whatsapp text,
   status text not null default 'solicitado'
-    check (status in ('solicitado', 'pendente', 'realizado', 'recusado')),
+    check (status in ('solicitado', 'cotado', 'aceito', 'em_andamento', 'realizado', 'recusado', 'cancelado')),
   date text,
   created_at timestamptz not null default now()
 );
@@ -49,6 +53,8 @@ create table if not exists public.budgets (
 create table if not exists public.completed_jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
+  service_id uuid references public.services(id) on delete set null,
+  source_budget_id uuid unique references public.budgets(id) on delete set null,
   title text not null,
   provider text not null,
   date text,

@@ -4,7 +4,7 @@ import Feather from "@expo/vector-icons/Feather";
 
 import { Logo } from "../components/Logo";
 import { useSession } from "../context/SessionContext";
-import { listBudgets, updateBudgetStatus } from "../data/remote";
+import { listBudgets, submitBudgetQuote, updateBudgetStatus } from "../data/remote";
 import type { Budget, BudgetStatus } from "../types/app";
 import { styles } from "./HomeScreen.styles";
 
@@ -46,7 +46,8 @@ export function ProfessionalHomeScreen() {
   );
   const counts = {
     solicitado: budgets.filter((budget) => budget.status === "solicitado").length,
-    pendente: budgets.filter((budget) => budget.status === "pendente").length,
+    cotado: budgets.filter((budget) => budget.status === "cotado").length,
+    andamento: budgets.filter((budget) => budget.status === "em_andamento").length,
     realizado: budgets.filter((budget) => budget.status === "realizado").length,
   };
 
@@ -58,6 +59,21 @@ export function ProfessionalHomeScreen() {
       );
     } catch (error) {
       Alert.alert("Orçamento não atualizado", error instanceof Error ? error.message : "Tente novamente em instantes.");
+    }
+  }
+
+  async function quoteBudget(id: string, amount: number, message: string) {
+    try {
+      await submitBudgetQuote(id, amount, message);
+      setBudgets((current) => current.map((budget) => budget.id === id ? {
+        ...budget,
+        status: "cotado",
+        quoteAmount: amount,
+        quoteMessage: message || null,
+        value: amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      } : budget));
+    } catch (error) {
+      Alert.alert("Proposta não enviada", error instanceof Error ? error.message : "Tente novamente em instantes.");
     }
   }
 
@@ -81,25 +97,17 @@ export function ProfessionalHomeScreen() {
         </Text>
         <View style={styles.metricGrid}>
           <Metric label="Solicitados" value={counts.solicitado} tone="blue" />
-          <Metric label="Pendentes" value={counts.pendente} tone="orange" />
-          <Metric label="Realizados" value={counts.realizado} tone="green" />
-          <Metric label="Este mês" value="R$ 0" tone="dark" wide />
+          <Metric label="Aguardando resposta" value={counts.cotado} tone="orange" />
+          <Metric label="Em andamento" value={counts.andamento} tone="dark" />
+          <Metric label="Concluídos" value={counts.realizado} tone="green" />
         </View>
-        <Pressable
-          style={styles.greenButton}
-          onPress={() =>
-            Alert.alert("Em breve", "A criação de orçamentos será conectada ao backend depois.")
-          }
-        >
-          <Text style={styles.greenButtonText}>+ Criar novo orçamento</Text>
-        </Pressable>
         <Text style={styles.sectionTitle}>Seus orçamentos</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryRow}
         >
-          {(["todos", "solicitado", "pendente", "realizado", "recusado"] as const).map(
+          {(["todos", "solicitado", "cotado", "aceito", "em_andamento", "realizado", "recusado", "cancelado"] as const).map(
             (item) => (
               <Pill
                 key={item}
@@ -112,7 +120,7 @@ export function ProfessionalHomeScreen() {
         </ScrollView>
         {visibleBudgets.length ? (
           visibleBudgets.map((budget) => (
-            <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} />
+            <BudgetCard key={budget.id} budget={budget} onUpdate={updateBudget} onQuote={quoteBudget} />
           ))
         ) : (
           <View style={styles.empty}>
@@ -147,15 +155,22 @@ function Metric({
 function BudgetCard({
   budget,
   onUpdate,
+  onQuote,
 }: {
   budget: Budget;
   onUpdate: (id: string, status: BudgetStatus) => void;
+  onQuote: (id: string, amount: number, message: string) => void;
 }) {
+  const [quoteValue, setQuoteValue] = useState("");
+  const [quoteMessage, setQuoteMessage] = useState("");
   const statusLabels: Record<BudgetStatus, string> = {
     solicitado: "Solicitado",
-    pendente: "Pendente",
+    cotado: "Proposta enviada",
+    aceito: "Aceito",
+    em_andamento: "Em andamento",
     realizado: "Realizado",
     recusado: "Recusado",
+    cancelado: "Cancelado",
   };
   return (
     <View style={styles.budgetCard}>
@@ -169,18 +184,53 @@ function BudgetCard({
         </Text>
       </View>
       <Text style={styles.budgetService}>{budget.service}</Text>
+      {budget.details ? <Text style={styles.budgetDate}>Detalhes: {budget.details}</Text> : null}
       <View style={styles.budgetBottom}>
         <Text style={styles.budgetValue}>{budget.value}</Text>
         {budget.status === "solicitado" ? (
-          <View style={styles.actionRow}>
-            <Pressable onPress={() => onUpdate(budget.id, "pendente")}>
-              <Text style={styles.actionText}>Analisar</Text>
-            </Pressable>
-            <Pressable onPress={() => onUpdate(budget.id, "recusado")}>
-              <Text style={styles.actionTextMuted}>Recusar</Text>
-            </Pressable>
+          <View style={styles.quoteForm}>
+            <TextInput
+              value={quoteValue}
+              onChangeText={setQuoteValue}
+              keyboardType="decimal-pad"
+              placeholder="Sua proposta (R$)"
+              placeholderTextColor="#71717A"
+              style={styles.input}
+              accessibilityLabel="Valor da proposta em reais"
+            />
+            <TextInput
+              value={quoteMessage}
+              onChangeText={setQuoteMessage}
+              placeholder="Mensagem (opcional)"
+              placeholderTextColor="#71717A"
+              style={styles.input}
+              accessibilityLabel="Mensagem da proposta"
+            />
+            <View style={styles.actionRow}>
+              <Pressable onPress={() => {
+                const input = quoteValue.trim();
+                const normalized = input.includes(",")
+                  ? input.replace(/\./g, "").replace(",", ".")
+                  : /^\d{1,3}(\.\d{3})+$/.test(input) ? input.replace(/\./g, "") : input;
+                const amount = Number(normalized);
+                if (!Number.isFinite(amount) || amount <= 0) {
+                  Alert.alert("Valor inválido", "Informe um valor maior que zero.");
+                  return;
+                }
+                onQuote(budget.id, amount, quoteMessage.trim());
+              }}>
+                <Text style={styles.actionText}>Enviar proposta</Text>
+              </Pressable>
+              <Pressable onPress={() => onUpdate(budget.id, "recusado")}>
+                <Text style={styles.actionTextMuted}>Recusar</Text>
+              </Pressable>
+            </View>
           </View>
-        ) : budget.status === "pendente" ? (
+        ) : budget.status === "aceito" ? (
+          <Pressable onPress={() => onUpdate(budget.id, "em_andamento")}>
+            <Text style={styles.actionText}>Iniciar serviço</Text>
+          </Pressable>
+        ) : budget.status === "em_andamento" ? (
           <Pressable onPress={() => onUpdate(budget.id, "realizado")}>
             <Text style={styles.actionText}>Concluir</Text>
           </Pressable>

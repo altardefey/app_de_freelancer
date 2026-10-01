@@ -123,6 +123,14 @@ export default async function handler(req: Request, res: ServerResponse) {
         result = await db.from("completed_jobs").select(JOB_COLUMNS).order("created_at", { ascending: false }).limit(100); break;
       case "createBudget":
         result = await db.from("budgets").insert({ ...v.budgetInput(payload), user_id: user.id }).select(BUDGET_COLUMNS).single(); break;
+      case "budgetQuote": {
+        const quote = v.quoteInput(payload);
+        result = await db.from("budgets").update({
+          status: "cotado",
+          quote_amount: quote.quote_amount,
+          quote_message: quote.quote_message,
+        }).eq("id", quote.id).select("id").single(); break;
+      }
       case "budgetStatus": {
         const data = v.object(payload, ["id", "status"]);
         result = await db.from("budgets").update({ status: v.budgetStatus(data.status) }).eq("id", v.uuid(data.id)).select("id").single(); break;

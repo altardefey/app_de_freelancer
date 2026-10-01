@@ -47,16 +47,30 @@ export function profileMetadata(value: unknown) {
     services: v.services.map(item => text(item, 100)) };
 }
 export function budgetInput(value: unknown) {
-  const v = object(value, ["client", "service", "value", "professionalId", "whatsapp", "status"]);
+  const v = object(value, ["client", "service", "value", "serviceId", "professionalId", "whatsapp", "status", "details"]);
   if (v.status !== undefined && v.status !== "solicitado") throw new InputError("Status inicial inválido.");
   const phone = v.whatsapp ? text(v.whatsapp, 20).replace(/\D/g, "") : null;
   if (phone && !/^\d{10,11}$/.test(phone)) throw new InputError("Telefone inválido.");
   return { client: text(v.client, 120), service: text(v.service, 200), value: text(v.value, 40),
-    professional_id: v.professionalId ? uuid(v.professionalId) : null, whatsapp: phone, status: "solicitado" };
+    service_id: v.serviceId ? uuid(v.serviceId) : null,
+    professional_id: v.professionalId ? uuid(v.professionalId) : null, whatsapp: phone,
+    details: v.details === undefined ? null : text(v.details, 2000, 0), status: "solicitado" };
+}
+export function quoteInput(value: unknown) {
+  const v = object(value, ["id", "quoteAmount", "quoteMessage"]);
+  if (typeof v.quoteAmount !== "number" || !Number.isFinite(v.quoteAmount) ||
+      v.quoteAmount <= 0 || v.quoteAmount > 10000000 ||
+      Math.abs(v.quoteAmount * 100 - Math.round(v.quoteAmount * 100)) > 1e-7) {
+    throw new InputError("Informe um valor válido para a proposta.");
+  }
+  return { id: uuid(v.id), quote_amount: v.quoteAmount,
+    quote_message: v.quoteMessage === undefined || v.quoteMessage === "" ? null : text(v.quoteMessage, 2000) };
 }
 export function budgetStatus(value: unknown) {
-  if (!["pendente", "realizado", "recusado"].includes(String(value))) throw new InputError("Status inválido.");
-  return value as "pendente" | "realizado" | "recusado";
+  if (!["cotado", "aceito", "em_andamento", "realizado", "recusado", "cancelado"].includes(String(value))) {
+    throw new InputError("Status inválido.");
+  }
+  return value as Exclude<import("../types/app").BudgetStatus, "solicitado">;
 }
 export function rating(value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) throw new InputError("Avalie de 1 a 5.");

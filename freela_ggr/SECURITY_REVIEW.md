@@ -33,10 +33,11 @@ As mudanças estão no código local. **Nenhuma configuração do Supabase ou da
 
 1. Se as tabelas já existem, **não rode novamente `schema.sql`**. Crie uma query nova, cole e execute `supabase/security-hardening.sql`. Ela substitui as policies das quatro tabelas conhecidas; revise se você adicionou policies próprias no painel.
 2. Execute `supabase/rate-limits.sql`, mesmo que já tenha sido usado. Pode ser reaplicado sem zerar contadores. Não reaplique o antigo `rls-security-update.sql` depois: ele é anterior a essas restrições.
-3. Em Authentication, mantenha a confirmação de e-mail e configure senha mínima de 12 caracteres, requisitos de complexidade e proteção contra senhas vazadas quando disponível no plano.
-4. Crie um widget Cloudflare Turnstile para os domínios exatos da aplicação. No Supabase, em proteção contra bots, escolha Turnstile e informe **a secret key**. Essa secret key nunca deve entrar em variáveis `EXPO_PUBLIC_*` ou no Git.
-5. Revise Authentication → Rate Limits e SMTP. O servidor web compartilha o IP de saída; os limites nativos do Auth não devem ser interpretados como uma cota individual perfeita de cada visitante do site.
-6. Revise Site URL e Redirect URLs com os domínios HTTPS autorizados. Não habilite cadastro anônimo ou buckets públicos para anexos pessoais.
+3. Execute `supabase/budget-workflow.sql` para habilitar propostas, respostas do cliente e transições de status. A migração é aditiva e reaplicável; aplique-a depois dos dois scripts anteriores.
+4. Em Authentication, mantenha a confirmação de e-mail e configure senha mínima de 12 caracteres, requisitos de complexidade e proteção contra senhas vazadas quando disponível no plano.
+5. Crie um widget Cloudflare Turnstile para os domínios exatos da aplicação. No Supabase, em proteção contra bots, escolha Turnstile e informe **a secret key**. Essa secret key nunca deve entrar em variáveis `EXPO_PUBLIC_*` ou no Git.
+6. Revise Authentication → Rate Limits e SMTP. O servidor web compartilha o IP de saída; os limites nativos do Auth não devem ser interpretados como uma cota individual perfeita de cada visitante do site.
+7. Revise Site URL e Redirect URLs com os domínios HTTPS autorizados. Não habilite cadastro anônimo ou buckets públicos para anexos pessoais.
 
 ## Para publicar na Vercel
 

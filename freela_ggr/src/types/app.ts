@@ -18,7 +18,14 @@ export const emptyLocation: LocationValue = {
 
 export type Role = "cliente" | "profissional";
 
-export type BudgetStatus = "solicitado" | "pendente" | "realizado" | "recusado";
+export type BudgetStatus =
+  | "solicitado"
+  | "cotado"
+  | "aceito"
+  | "em_andamento"
+  | "realizado"
+  | "recusado"
+  | "cancelado";
 
 export type Service = {
   id: string;
@@ -43,6 +50,9 @@ export type Budget = {
   value: string;
   date: string;
   status: BudgetStatus;
+  details?: string | null;
+  quoteAmount?: number | null;
+  quoteMessage?: string | null;
 };
 
 export type CompletedJob = {

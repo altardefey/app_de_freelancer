@@ -186,6 +186,8 @@ Veja o arquivo `LICENSE`.
 
 Depois do schema base, aplique `supabase/rate-limits.sql` no SQL Editor. Os limites de gravação e a configuração separada do Supabase Auth estão em [supabase/RATE_LIMITS.md](supabase/RATE_LIMITS.md). Apenas atualizar o app não ativa os limites no banco.
 
+Para ativar o fluxo de propostas em um banco existente, aplique `supabase/budget-workflow.sql` depois de `supabase/security-hardening.sql` e `supabase/rate-limits.sql`. A migração adiciona detalhes, valores propostos e estados do pedido; não reaplique `schema.sql` em uma base já utilizada.
+
 ## Segurança e publicação
 
 Veja [SECURITY_REVIEW.md](SECURITY_REVIEW.md) para a revisão, SQL de restrições, configuração do Supabase/Turnstile/Vercel e pendências. A web agora usa uma API com cookies HttpOnly; rode `npm run web` para testar com o servidor local.
