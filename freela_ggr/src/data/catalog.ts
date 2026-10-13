@@ -104,7 +104,7 @@ export const initialBudgets: Budget[] = [
     service: "Instalação elétrica",
     value: "R$ 320",
     date: "Ontem",
-    status: "pendente",
+    status: "em_andamento",
   },
   {
     id: "3",

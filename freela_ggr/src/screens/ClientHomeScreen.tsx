@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LocationFields } from "../components/LocationFields";
 import { useSession } from "../context/SessionContext";
 import {
+  listBudgets,
+  updateBudgetStatus,
   listServices,
   listCompletedJobs,
   createBudget,
@@ -21,7 +23,7 @@ import {
 } from "../data/remote";
 import { buildCatalogDictionary, serviceCategories } from "../data/catalog";
 import { distance, normalize } from "../utils/searchTools";
-import type { Service, CompletedJob } from "../types/app";
+import type { Budget, BudgetStatus, Service, CompletedJob } from "../types/app";
 import { Button, Empty, Field, Notice, Page } from "../ui/components";
 import { colors, fonts, ui } from "../ui/design";
 
@@ -30,6 +32,9 @@ export function ClientHomeScreen() {
   const insets = useSafeAreaInsets();
   const [services, setServices] = useState<Service[]>([]);
   const [jobs, setJobs] = useState<CompletedJob[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [responding, setResponding] = useState<string | null>(null);
+  const responseLock = useRef(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
   const [editLocation, setEditLocation] = useState(false);
@@ -65,7 +70,8 @@ export function ClientHomeScreen() {
     setLoading(true);
     setError("");
     try {
-      const [s, j] = await Promise.all([listServices(), listCompletedJobs()]);
+      const [s, j, b] = await Promise.all([listServices(), listCompletedJobs(), listBudgets()]);
+      setBudgets(b);
       setServices(s);
       setJobs(j);
     } catch {
@@ -85,14 +91,16 @@ export function ClientHomeScreen() {
     setBusy(true);
     setModalError("");
     try {
-      await createBudget({
+      const request = await createBudget({
         client: "Cliente do app",
         service: selected.title,
+        serviceId: selected.id,
         value: selected.price,
         professionalId: selected.providerId,
         status: "solicitado",
         details: drafts[selected.id] ?? "",
       });
+      setBudgets((old) => [request, ...old]);
       setDrafts((old) => ({ ...old, [selected.id]: "" }));
       setSelected(null);
       setSuccess(
@@ -107,6 +115,21 @@ export function ClientHomeScreen() {
       setBusy(false);
     }
   }
+  async function respond(id: string, status: BudgetStatus) {
+    if (responseLock.current) return;
+    responseLock.current = true;
+    setResponding(id);
+    try {
+      await updateBudgetStatus(id, status);
+      setBudgets(old => old.map(b => b.id === id ? { ...b, status } : b));
+    } catch {
+      setError("Não foi possível atualizar o pedido. Tente novamente.");
+    } finally {
+      responseLock.current = false;
+      setResponding(null);
+    }
+  }
+  const statuses: Record<BudgetStatus, string> = { solicitado: "Pedido enviado", cotado: "Proposta recebida", aceito: "Aceito", em_andamento: "Em andamento", realizado: "Concluído", recusado: "Recusado", cancelado: "Cancelado" };
   async function rate(id: string, rating: number) {
     if (ratingLock.current) return;
     ratingLock.current = true;
@@ -136,6 +159,21 @@ export function ClientHomeScreen() {
   return (
     <>
       <Page>
+        {budgets.length > 0 ? <View style={{ gap: 16 }}>
+          <Text style={ui.heading}>Seus pedidos</Text>
+          {budgets.map(b => <View key={b.id} style={ui.card}>
+            <Text style={ui.heading}>{b.service}</Text>
+            <Text style={ui.label}>{statuses[b.status]}</Text>
+            {b.details ? <Text style={ui.body}>{b.details}</Text> : null}
+            {b.quoteAmount != null ? <Text style={ui.heading}>{b.value}</Text> : null}
+            {b.quoteMessage ? <Text style={ui.body}>{b.quoteMessage}</Text> : null}
+            {b.status === "cotado" ? <>
+              <Button title="Aceitar proposta" busy={responding === b.id} disabled={!!responding} onPress={() => void respond(b.id, "aceito")} />
+              <Button title="Recusar proposta" secondary disabled={!!responding} onPress={() => void respond(b.id, "recusado")} />
+            </> : null}
+            {["solicitado", "cotado", "aceito"].includes(b.status) ? <Button title="Cancelar pedido" secondary disabled={!!responding} onPress={() => void respond(b.id, "cancelado")} /> : null}
+          </View>)}
+        </View> : null}
         <View style={[ui.hero, { backgroundColor: colors.lavender }]}>
           <Text style={[ui.heroTitle, { color: colors.ink }]}>
             Tem algo para fazer?{"\n"}Encontre quem resolve.

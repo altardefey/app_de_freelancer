@@ -5,10 +5,11 @@ import Feather from "@expo/vector-icons/Feather";
 import { useSession } from "../context/SessionContext";
 import { useSubscription } from "../context/SubscriptionContext";
 import { listQuotes, type Quote } from "../data/quotes";
-import { listBudgets, updateBudgetStatus } from "../data/remote";
+import { listBudgets, submitBudgetQuote, updateBudgetStatus } from "../data/remote";
 import type { Budget, BudgetStatus } from "../types/app";
-import { Button, Empty, Notice, Page } from "../ui/components";
+import { Button, Empty, Field, Notice, Page } from "../ui/components";
 import { colors, fonts, ui } from "../ui/design";
+import { parseAmount } from "../security/quoteAmount";
 export const currency = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export function quoteText(quote: Quote) {
@@ -36,6 +37,7 @@ export function ProfessionalHomeScreen({
   const [filter, setFilter] = useState<"todos" | BudgetStatus>("todos");
   const [updating, setUpdating] = useState<string | null>(null);
   const lock = useRef(false);
+  const [drafts, setDrafts] = useState<Record<string, { value: string; message: string }>>({});
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -66,6 +68,23 @@ export function ProfessionalHomeScreen({
       setUpdating(null);
     }
   }
+  async function sendProposal(id: string) {
+    if (lock.current) return;
+    const draft = drafts[id];
+    const cents = parseAmount(draft?.value ?? "");
+    if (cents === null) { setError("Informe um valor válido para a proposta."); return; }
+    lock.current = true;
+    setUpdating(id);
+    try {
+      await submitBudgetQuote(id, cents / 100, draft?.message ?? "");
+      setBudgets(old => old.map(b => b.id === id ? { ...b, status: "cotado", quoteAmount: cents / 100, quoteMessage: draft?.message, value: currency(cents) } : b));
+    } catch {
+      setError("Não foi possível enviar a proposta. Seus dados foram mantidos.");
+    } finally {
+      lock.current = false;
+      setUpdating(null);
+    }
+  }
   if (role !== "profissional")
     return (
       <Page>
@@ -77,7 +96,10 @@ export function ProfessionalHomeScreen({
     );
   const statuses = {
     solicitado: "Novo pedido",
-    pendente: "Em análise",
+    cotado: "Proposta enviada",
+    aceito: "Aceito",
+    em_andamento: "Em andamento",
+    cancelado: "Cancelado",
     realizado: "Concluído",
     recusado: "Recusado",
   };
@@ -225,7 +247,10 @@ export function ProfessionalHomeScreen({
                   [
                     "todos",
                     "solicitado",
-                    "pendente",
+                    "cotado",
+                    "aceito",
+                    "em_andamento",
+                    "cancelado",
                     "realizado",
                     "recusado",
                   ] as const
@@ -272,13 +297,18 @@ export function ProfessionalHomeScreen({
                         <Text style={ui.body}>{b.details}</Text>
                       ) : null}
                       <Text style={ui.heading}>{b.value}</Text>
+                      {b.quoteMessage ? <Text style={ui.body}>{b.quoteMessage}</Text> : null}
+                      {b.status === "solicitado" ? <>
+                        <Field label="Valor da proposta em reais" keyboardType="decimal-pad" value={drafts[b.id]?.value ?? ""} onChangeText={value => setDrafts(old => ({ ...old, [b.id]: { value, message: old[b.id]?.message ?? "" } }))} />
+                        <Field label="Mensagem da proposta" maxLength={2000} value={drafts[b.id]?.message ?? ""} onChangeText={message => setDrafts(old => ({ ...old, [b.id]: { message, value: old[b.id]?.value ?? "" } }))} />
+                      </> : null}
                       {b.status === "solicitado" ? (
                         <>
                           <Button
-                            title="Analisar pedido"
+                            title="Enviar proposta"
                             busy={updating === b.id}
                             disabled={!!updating}
-                            onPress={() => void update(b.id, "pendente")}
+                            onPress={() => void sendProposal(b.id)}
                           />
                           <Button
                             title="Recusar pedido"
@@ -287,7 +317,9 @@ export function ProfessionalHomeScreen({
                             onPress={() => void update(b.id, "recusado")}
                           />
                         </>
-                      ) : b.status === "pendente" ? (
+                      ) : b.status === "aceito" ? (
+                        <Button title="Iniciar serviço" busy={updating === b.id} disabled={!!updating} onPress={() => void update(b.id, "em_andamento")} />
+                      ) : b.status === "em_andamento" ? (
                         <Button
                           title="Marcar como concluído"
                           busy={updating === b.id}

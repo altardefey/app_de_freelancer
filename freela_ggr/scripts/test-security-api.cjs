@@ -56,6 +56,11 @@ async function call(action, payload = {}, extra = {}) {
   const limited = await call('login', credentials);
   assert.equal(limited.status, 429); assert.doesNotMatch(JSON.stringify(limited.body), /sensitive/);
   assert.throws(() => validation.budgetInput({ client: 'a', service: 'b', value: '1', user_id: 'attacker' }));
+  assert.equal(validation.budgetInput({ client: 'a', service: 'b', value: 'R$ 1', details: '' }).details, '');
+  assert.deepEqual(validation.quoteInput({ id: '00000000-0000-0000-0000-000000000001', quoteAmount: 129.99 }), {
+    id: '00000000-0000-0000-0000-000000000001', quote_amount: 129.99, quote_message: null,
+  });
+  assert.throws(() => validation.quoteInput({ id: '00000000-0000-0000-0000-000000000001', quoteAmount: 0 }));
   assert.throws(() => validation.rating(6));
   assert.throws(() => validation.uuid("' or true --"));
   assert.throws(() => validation.password('x'.repeat(73), true));

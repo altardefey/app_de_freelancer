@@ -40,7 +40,7 @@ async function fixture(
       case "services":
         data = [
           {
-            id: "service-one",
+            id: "00000000-0000-0000-0000-000000000002",
             provider_id: id,
             title: "Pintura residencial",
             provider: "Ana Souza",

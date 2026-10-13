@@ -11,6 +11,7 @@ Aplicativo em React Native para conectar clientes a profissionais de serviços l
 - Catálogo com pesquisa, sugestão de busca, categorias e localização por CEP/estado/cidade/bairro.
 - Pedidos de clientes com detalhes salvos no banco e disponíveis para o profissional.
 - Painel profissional com histórico, pedidos recebidos e atualização de status.
+- Propostas com valor e mensagem, aceite ou recusa pelo cliente e acompanhamento até a conclusão.
 - Criação de orçamento com cliente, descrição, valor e WhatsApp opcional.
 - Rascunho de orçamento salvo no aparelho, separado por conta.
 - Compartilhamento do orçamento em texto pela interface nativa do aparelho.
@@ -104,9 +105,10 @@ Aplique os arquivos no SQL Editor do Supabase nesta ordem:
 1. supabase/schema.sql
 2. supabase/security-hardening.sql
 3. supabase/rate-limits.sql
-4. supabase/freela-plus.sql
+4. supabase/budget-workflow.sql
+5. supabase/freela-plus.sql
 
-Em um banco já configurado com os três primeiros arquivos, aplique apenas freela-plus.sql. Se reaplicar security-hardening.sql, aplique freela-plus.sql por último para restaurar as permissões da coluna de detalhes.
+Em um banco já configurado com os três primeiros arquivos, aplique budget-workflow.sql e freela-plus.sql. Não reaplique schema.sql em uma base já utilizada. Se reaplicar security-hardening.sql, reaplique budget-workflow.sql e depois freela-plus.sql para restaurar as permissões e regras.
 
 Principais tabelas:
 

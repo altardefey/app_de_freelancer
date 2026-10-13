@@ -78,7 +78,7 @@ export const fallbackBudgets: Budget[] = [
     service: "Instalação elétrica",
     value: "R$ 320,00",
     date: "Ontem",
-    status: "pendente",
+    status: "em_andamento",
   },
   {
     id: "local-budget-3",
