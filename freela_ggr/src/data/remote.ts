@@ -30,6 +30,7 @@ type BudgetRow = {
   date?: string | null;
   status?: BudgetStatus | null;
   created_at?: string | null;
+  details?: string | null;
 };
 
 type CompletedJobRow = {
@@ -87,6 +88,7 @@ function mapBudget(row: BudgetRow): Budget {
     value: formatCurrency(row.value),
     date: row.date || formatDate(row.created_at),
     status: row.status || "solicitado",
+    details: row.details ?? "",
   };
 }
 
@@ -98,16 +100,6 @@ function mapCompletedJob(row: CompletedJobRow): CompletedJob {
     date: row.date || `Finalizado em ${formatDate(row.created_at)}`,
     rating: row.rating ?? null,
   };
-}
-
-// evita quebrar a tela se a tabela ainda não existir no banco
-function isMissingTable(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "PGRST205"
-  );
 }
 
 // pega o usuário logado para salvar registros com dono
@@ -123,10 +115,7 @@ export async function listServices(): Promise<Service[]> {
     .select(SERVICE_COLUMNS)
     .order("created_at", { ascending: false }).limit(100);
 
-  if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar serviços:");
-    return [];
-  }
+  if (error) throw new Error("Não foi possível carregar os serviços.");
 
   const items = (data ?? []).map((item) => mapService(item as ServiceRow));
   return items;
@@ -139,10 +128,7 @@ export async function listBudgets(): Promise<Budget[]> {
     .select(BUDGET_COLUMNS)
     .order("created_at", { ascending: false }).limit(100);
 
-  if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar orçamentos:");
-    return [];
-  }
+  if (error) throw new Error("Não foi possível carregar os pedidos.");
 
   const items = (data ?? []).map((item) => mapBudget(item as BudgetRow));
   return items;
@@ -155,10 +141,7 @@ export async function listCompletedJobs(): Promise<CompletedJob[]> {
     .select(JOB_COLUMNS)
     .order("created_at", { ascending: false }).limit(100);
 
-  if (error) {
-    if (!isMissingTable(error)) console.warn("Erro ao listar serviços concluídos:");
-    return [];
-  }
+  if (error) throw new Error("Não foi possível carregar os serviços concluídos.");
 
   const items = (data ?? []).map((item) => mapCompletedJob(item as CompletedJobRow));
   return items;
@@ -168,6 +151,7 @@ export async function createBudget(
   payload: Omit<Budget, "id" | "date" | "status"> & {
     professionalId?: string | null;
     whatsapp?: string;
+    details?: string;
     status?: BudgetStatus;
   },
 ): Promise<Budget> {

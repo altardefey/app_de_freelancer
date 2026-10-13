@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -36,7 +38,9 @@ export function LocationFields({
   compact?: boolean;
   showStreet?: boolean;
 }) {
-  const [open, setOpen] = useState<"state" | "city" | "neighborhood" | null>(null);
+  const [open, setOpen] = useState<"state" | "city" | "neighborhood" | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
   const [cities, setCities] = useState<string[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
@@ -64,7 +68,12 @@ export function LocationFields({
   }, [value.uf]);
 
   useEffect(() => {
-    if (!value.uf || !value.city || search.length < 2 || open !== "neighborhood") {
+    if (
+      !value.uf ||
+      !value.city ||
+      search.length < 2 ||
+      open !== "neighborhood"
+    ) {
       return;
     }
     let cancelled = false;
@@ -178,7 +187,9 @@ export function LocationFields({
         maxLength={9}
         style={[styles.field, styles.cepInput, compact && styles.fieldCompact]}
       />
-      {buscandoCep ? <Text style={styles.loadingText}>Buscando endereço...</Text> : null}
+      {buscandoCep ? (
+        <Text style={styles.loadingText}>Buscando endereço...</Text>
+      ) : null}
 
       <View style={compact ? styles.compactRow : styles.stack}>
         <Pressable
@@ -189,13 +200,20 @@ export function LocationFields({
           }}
         >
           <Feather name="map-pin" size={16} color="#A1A1AA" />
-          <Text style={[styles.fieldText, !value.uf && styles.placeholder]} numberOfLines={1}>
+          <Text
+            style={[styles.fieldText, !value.uf && styles.placeholder]}
+            numberOfLines={1}
+          >
             {value.uf ? `${value.stateName} (${value.uf})` : "Estado"}
           </Text>
           <Feather name="chevron-down" size={16} color="#71717A" />
         </Pressable>
         <Pressable
-          style={[styles.field, compact && styles.fieldCompact, !value.uf && styles.fieldDisabled]}
+          style={[
+            styles.field,
+            compact && styles.fieldCompact,
+            !value.uf && styles.fieldDisabled,
+          ]}
           disabled={!value.uf}
           onPress={() => {
             setSearch("");
@@ -203,7 +221,10 @@ export function LocationFields({
           }}
         >
           <Feather name="navigation" size={16} color="#A1A1AA" />
-          <Text style={[styles.fieldText, !value.city && styles.placeholder]} numberOfLines={1}>
+          <Text
+            style={[styles.fieldText, !value.city && styles.placeholder]}
+            numberOfLines={1}
+          >
             {value.city || "Cidade"}
           </Text>
           <Feather name="chevron-down" size={16} color="#71717A" />
@@ -211,7 +232,11 @@ export function LocationFields({
       </View>
 
       <Pressable
-        style={[styles.field, compact && styles.fieldCompact, !value.city && styles.fieldDisabled]}
+        style={[
+          styles.field,
+          compact && styles.fieldCompact,
+          !value.city && styles.fieldDisabled,
+        ]}
         disabled={!value.city}
         onPress={() => {
           setSearch("");
@@ -245,7 +270,18 @@ export function LocationFields({
         animationType="fade"
         onRequestClose={() => setOpen(null)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setOpen(null)}>
+        <KeyboardAvoidingView
+          style={styles.backdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Fechar localização"
+            onPress={() => setOpen(null)}
+            style={{ alignSelf: "flex-end", padding: 16 }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 16 }}>Fechar</Text>
+          </Pressable>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetTitle}>{sheetTitle}</Text>
             <View style={styles.searchBox}>
@@ -265,15 +301,22 @@ export function LocationFields({
             </View>
             {(open === "city" && loadingCities) ||
             (open === "neighborhood" && loadingNeighborhoods) ? (
-              <ActivityIndicator color="#CCFF00" style={{ marginTop: 24 }} />
+              <ActivityIndicator color="#6A5FC1" style={{ marginTop: 24 }} />
             ) : (
-              <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-                {open === "neighborhood" && search.trim().length >= 2 && !options.length ? (
+              <ScrollView
+                style={styles.list}
+                keyboardShouldPersistTaps="handled"
+              >
+                {open === "neighborhood" &&
+                search.trim().length >= 2 &&
+                !options.length ? (
                   <Pressable
                     style={styles.option}
                     onPress={() => selectNeighborhood(search.trim())}
                   >
-                    <Text style={styles.optionText}>Usar “{search.trim()}”</Text>
+                    <Text style={styles.optionText}>
+                      Usar “{search.trim()}”
+                    </Text>
                   </Pressable>
                 ) : null}
                 {options.map((option) => (
@@ -300,7 +343,7 @@ export function LocationFields({
               </ScrollView>
             )}
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

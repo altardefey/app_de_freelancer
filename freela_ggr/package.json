@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/rubik": "^0.4.2",
     "@expo/ui": "~57.0.19",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "^3.1.1",
@@ -10,6 +11,8 @@
     "expo": "~57.0.24",
     "expo-blur": "~57.0.3",
     "expo-constants": "~57.0.19",
+    "expo-crypto": "~57.0.4",
+    "expo-dev-client": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.3",
@@ -27,6 +30,8 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-purchases": "^10.13.0",
+    "react-native-purchases-ui": "^10.13.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -37,6 +42,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.64.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.19.0",
     "@types/react": "~19.2.2",
@@ -53,7 +59,9 @@
     "check:types": "tsc --noEmit",
     "security:secrets": "node scripts/scan-secrets.cjs",
     "security:audit": "npm audit",
-    "test:security": "node scripts/test-security-api.cjs && node scripts/test-security-db.cjs && node scripts/test-rate-limits.cjs"
+    "test:security": "node scripts/test-security-api.cjs && node scripts/test-security-db.cjs && node scripts/test-rate-limits.cjs",
+    "test:freela-plus": "node scripts/test-freela-plus.cjs && node scripts/test-revenuecat.cjs && node scripts/test-billing.cjs",
+    "test:ui": "playwright test"
   },
   "private": true,
   "overrides": {

@@ -43,6 +43,7 @@ export type Budget = {
   value: string;
   date: string;
   status: BudgetStatus;
+  details?: string;
 };
 
 export type CompletedJob = {

@@ -131,7 +131,7 @@ function authErrorMessage(error: { message: string; code?: string; status?: numb
   }
 
   if (normalized.includes("password")) {
-    return "A senha não foi aceita pelo Supabase. Tente uma senha mais forte.";
+    return "A senha não foi aceita. Use uma senha mais forte.";
   }
 
   if (normalized.includes("email")) {

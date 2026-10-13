@@ -109,6 +109,28 @@ export default async function handler(req: Request, res: ServerResponse) {
     const db = createClient(url, key, { global: { headers: { Authorization: `Bearer ${access}` } }, auth: { persistSession: false, autoRefreshToken: false } });
     let result;
     switch (action) {
+      case "freelaUsage":
+        v.object(payload, []);
+        result = await db.rpc("freela_usage"); break;
+      case "quotes":
+        v.object(payload, []);
+        result = await db.from("professional_quotes").select("*").order("created_at", { ascending: false }).limit(100); break;
+      case "createQuote": {
+        const item = v.object(payload, ["request_id", "client", "service", "amount_cents", "whatsapp"]);
+        if (!Number.isSafeInteger(item.amount_cents) || Number(item.amount_cents) <= 0 || Number(item.amount_cents) > 999999999) throw new v.InputError("Informe um valor válido.");
+        const phone = item.whatsapp ? v.text(item.whatsapp, 11) : null;
+        if (phone && !/^\d{10,11}$/.test(phone)) throw new v.InputError("Informe um WhatsApp com DDD.");
+        const requestId = v.uuid(item.request_id);
+        result = await db.from("professional_quotes").insert({ user_id: user.id, request_id: requestId, client: v.text(item.client, 120), service: v.text(item.service, 2000), amount_cents: item.amount_cents, whatsapp: phone }).select().single();
+        if (result.error?.code === "23505") result = await db.from("professional_quotes").select().eq("request_id", requestId).single();
+        break;
+      }
+      case "syncSubscription": {
+        v.object(payload, []);
+        const response = await fetch(`${url}/functions/v1/revenuecat-sync`, { method: "POST", headers: { Authorization: `Bearer ${access}`, apikey: key, "Content-Type": "application/json" }, body: "{}" });
+        if (!response.ok) return send(res, 503, { error: { message: "Não foi possível atualizar sua assinatura. Tente novamente em instantes." } });
+        return send(res, 200, { data: { synced: true } });
+      }
       case "profile":
         v.object(payload, []);
         result = await db.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle(); break;
@@ -142,6 +164,6 @@ export default async function handler(req: Request, res: ServerResponse) {
     // não manda detalhes do banco, tokens ou dados pessoais na mensagem de erro
     return send(res, status, { error: { status, code: limited ? "PT429" : err.code,
       details: err.code === "PT429" ? err.details : undefined,
-      message: error instanceof v.InputError ? error.message : limited ? "Limite temporário atingido." : "Não foi possível concluir a operação. Confira os dados e tente novamente." } });
+      message: err.code === "PT402" ? "Você usou os 5 orçamentos deste mês. Assine o Freela+ ou aguarde a renovação da franquia." : error instanceof v.InputError ? error.message : limited ? "Limite temporário atingido." : "Não foi possível concluir a operação. Confira os dados e tente novamente." } });
   }
 }

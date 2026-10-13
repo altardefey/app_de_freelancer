@@ -48,3 +48,8 @@ example
 !.env.example
 .vercel/
 security-scan-results/
+
+# Relatórios gerados pelos testes
+test-results/
+playwright-report/
+/output/native-check/

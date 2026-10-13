@@ -48,12 +48,12 @@ export function profileMetadata(value: unknown) {
     services: v.services.map(item => text(item, 100)) };
 }
 export function budgetInput(value: unknown) {
-  const v = object(value, ["client", "service", "value", "professionalId", "whatsapp", "status"]);
+  const v = object(value, ["client", "service", "value", "professionalId", "whatsapp", "status", "details"]);
   if (v.status !== undefined && v.status !== "solicitado") throw new InputError("Status inicial inválido.");
   const phone = v.whatsapp ? text(v.whatsapp, 20).replace(/\D/g, "") : null;
   if (phone && !/^\d{10,11}$/.test(phone)) throw new InputError("Telefone inválido.");
   return { client: text(v.client, 120), service: text(v.service, 200), value: text(v.value, 40),
-    professional_id: v.professionalId ? uuid(v.professionalId) : null, whatsapp: phone, status: "solicitado" };
+    professional_id: v.professionalId ? uuid(v.professionalId) : null, whatsapp: phone, status: "solicitado", details: text(v.details ?? "", 2000, 0) };
 }
 export function budgetStatus(value: unknown) {
   if (!["pendente", "realizado", "recusado"].includes(String(value))) throw new InputError("Status inválido.");

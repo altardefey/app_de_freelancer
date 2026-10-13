@@ -1,23 +1,44 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { Platform, useColorScheme } from 'react-native';
-
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-import { IconFontProvider } from '@/components/icon-font-provider';
-
-if (Platform.OS !== 'web') {
-  SplashScreen.preventAutoHideAsync();
-}
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import {
+  useFonts,
+  Rubik_400Regular,
+  Rubik_500Medium,
+  Rubik_700Bold,
+} from "@expo-google-fonts/rubik";
+import { ActivityIndicator, View } from "react-native";
+import { SessionProvider } from "../context/SessionContext";
+import { SubscriptionProvider } from "../context/SubscriptionContext";
+import { colors } from "../ui/design";
+export default function Layout() {
+  const [loaded, error] = useFonts({
+    Rubik_400Regular,
+    Rubik_500Medium,
+    Rubik_700Bold,
+  });
+  if (!loaded && !error)
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          backgroundColor: colors.canvas,
+        }}
+      >
+        <ActivityIndicator color={colors.purple} />
+      </View>
+    );
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <IconFontProvider>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </IconFontProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <SubscriptionProvider>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.canvas },
+          }}
+        />
+      </SubscriptionProvider>
+    </SessionProvider>
   );
 }
