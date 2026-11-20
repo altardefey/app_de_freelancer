@@ -6,19 +6,31 @@ Aplicativo em React Native para conectar clientes a profissionais de serviços l
 
 ## Funcionalidades
 
-- Login com Supabase Auth, confirmação de e-mail e escolha de perfil.
+- Login e recuperação de senha com Supabase Auth, conforme a configuração de e-mail do projeto.
 - Cadastro em quatro etapas: perfil, localização, serviços e dados de acesso.
 - Catálogo com pesquisa, sugestão de busca, categorias e localização por CEP/estado/cidade/bairro.
+- Publicação e edição de anúncios, com portfólio de fotos e atendimento presencial ou remoto.
 - Pedidos de clientes com detalhes salvos no banco e disponíveis para o profissional.
 - Painel profissional com histórico, pedidos recebidos e atualização de status.
 - Propostas com valor e mensagem, aceite ou recusa pelo cliente e acompanhamento até a conclusão.
 - Criação de orçamento com cliente, descrição, valor e WhatsApp opcional.
 - Rascunho de orçamento salvo no aparelho, separado por conta.
-- Compartilhamento do orçamento em texto pela interface nativa do aparelho.
+- Compartilhamento de uma mensagem pronta e de um PDF detalhado do orçamento pelo WhatsApp.
 - Avaliação de serviços concluídos.
 - Página de conta e página Freela+.
 
 A interface usa verde nas ações, roxo na identidade, superfícies claras e tipografia Rubik. Os componentes compartilhados ficam em src/ui.
+
+## Orçamento pelo WhatsApp
+
+Ao abrir o WhatsApp pelo orçamento, o Freela prepara a mensagem e gera o PDF com cliente, data, serviço, valor e detalhes do pedido quando disponíveis. A mensagem é editável e pode incluir prazo ou disponibilidade. Em serviços presenciais, ela também solicita o endereço.
+
+| Plataforma | Como enviar |
+| --- | --- |
+| Web | O botão baixa `orcamento-freela.pdf` e abre o WhatsApp com a mensagem pronta. Use o clipe da conversa para anexar o PDF antes de enviar. |
+| Android e iOS | O botão gera o PDF e abre a conversa com a mensagem pronta. Depois de enviar a mensagem, volte ao Freela, toque em **Compartilhar PDF** e escolha a mesma conversa no WhatsApp. |
+
+Também é possível baixar ou compartilhar só o PDF pelo botão correspondente. Nos pedidos do catálogo, o número do cliente só fica disponível ao profissional após salvar a proposta e quando o cliente autorizou o contato.
 
 ## Planos
 
@@ -26,6 +38,7 @@ A interface usa verde nas ações, roxo na identidade, superfícies claras e tip
 | --- | --- | --- |
 | Orçamentos criados pelo profissional | 10 por mês | 10 por mês |
 | Histórico e compartilhamento | Sim | Sim |
+| Fotos por anúncio | Até 3 | Até 10 |
 | Mensalidade prevista no Brasil | R$ 0 | R$ 14,99 |
 
 A franquia renova no primeiro dia de cada mês, no fuso de Brasília (America/Sao_Paulo). Não acumula. Pedidos enviados por clientes não consomem a franquia do profissional.
@@ -66,7 +79,7 @@ Siga o [guia de configuração do RevenueCat](REVENUECAT_SETUP.md). Ele separa t
 
 Use Node.js 22 ou superior e npm. Copie .env.example para .env.local e preencha suas configurações. Não há fallback de credenciais no código.
 
-    npm install
+    npm ci
     npm run web
 
 A web com a API local abre em **http://localhost:3000**. Esse comando gera a versão web e inicia o servidor que trata os cookies da sessão. A prévia isolada do Metro não substitui essa API.
@@ -108,7 +121,7 @@ Aplique os arquivos no SQL Editor do Supabase nesta ordem:
 4. supabase/budget-workflow.sql
 5. supabase/freela-plus.sql
 
-Em um banco já configurado com os três primeiros arquivos, aplique budget-workflow.sql e freela-plus.sql. Não reaplique schema.sql em uma base já utilizada. Se reaplicar security-hardening.sql, reaplique budget-workflow.sql e depois freela-plus.sql para restaurar as permissões e regras.
+Essa é a sequência inicial. Consulte o [guia de publicação](PUBLICACAO.md) para os scripts adicionais de catálogo, portfólio, conta, pedidos e aceite dos documentos legais. Em uma base existente, confira quais scripts já foram aplicados antes de avançar. Se reaplicar `security-hardening.sql`, reaplique `budget-workflow.sql` e depois `freela-plus.sql` para restaurar as permissões e regras.
 
 Principais tabelas:
 
@@ -134,7 +147,8 @@ Veja também [limites de gravação](supabase/RATE_LIMITS.md) e [revisão de seg
 | npm run test:security | API, sessão, RLS, validação e limites de gravação |
 | npm run test:freela-plus | Franquia mensal, assinatura, expiração, identidade e resultados do paywall |
 | npm run build:web | Exportação web e ajuste de scripts para a política de segurança |
-| npm run test:ui | Login, navegação, rascunhos, criação, limite e telas estreitas |
+| npm run test:ui | Login, navegação, rascunhos, orçamentos, download do PDF e telas estreitas |
+| node scripts/test-service-and-legal.cjs | Cadastro, aceite dos documentos legais, portfólio e modalidade do pedido |
 | npm run security:secrets | Padrões de possíveis segredos em arquivos e histórico |
 
 Execute build:web antes de test:ui. A configuração atual do Playwright usa Microsoft Edge instalado.
@@ -161,6 +175,8 @@ As capturas de revisão visual ficam em output/freela-redesign. O pacote JavaScr
     scripts/                      Build e testes locais
     tests/                        Testes de interface
 
+As ferramentas locais, os rascunhos da documentação acadêmica e as exportações de build ficam fora dos novos commits. As fontes empacotadas do Freela incluem os três pesos da Rubik usados pela interface.
+
 ## Pendências de publicação
 
 - Aplicar as migrações e publicar a função de sincronização no projeto remoto.
@@ -168,9 +184,8 @@ As capturas de revisão visual ficam em output/freela-redesign. O pacote JavaScr
 - Configurar webhook, chaves de produção e links legais.
 - Definir os identificadores definitivos do app nas lojas.
 - Testar compra, restauração, cancelamento, expiração, pagamento pendente e troca de conta em aparelho.
-- Implementar criação/edição de serviços para profissionais.
-- Implementar PDF e upload de anexos, caso entrem no escopo; o fluxo atual compartilha texto.
-- Remover componentes antigos sem uso e concluir a revisão de acessibilidade nativa.
+- Testar a geração do PDF e o envio pelo WhatsApp em aparelhos Android e iOS, com orçamentos presenciais e remotos.
+- Concluir a revisão de acessibilidade nativa.
 
 ## Comentários no código
 
