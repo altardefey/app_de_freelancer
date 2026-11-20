@@ -10,10 +10,11 @@ export type Quote = {
   amount_cents: number;
   whatsapp: string | null;
   created_at: string;
+  remote?: boolean;
 };
 export type QuoteInput = Pick<
   Quote,
-  "request_id" | "client" | "service" | "amount_cents" | "whatsapp"
+  "request_id" | "client" | "service" | "amount_cents" | "whatsapp" | "remote"
 >;
 export type Usage = {
   used: number;
@@ -33,6 +34,7 @@ export async function listQuotes(): Promise<Quote[]> {
   const { data, error } = await supabase
     .from("professional_quotes")
     .select("*")
+    .is("source_budget_id", null)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error("Não foi possível carregar os orçamentos.");
@@ -61,7 +63,7 @@ export async function saveQuote(input: QuoteInput): Promise<Quote> {
     throw Object.assign(
       new Error(
         error.code === "PT402"
-          ? "Você usou os 5 orçamentos deste mês. Conheça o Freela+ ou aguarde a renovação da franquia."
+          ? "Você usou os 10 orçamentos deste mês. Aguarde a renovação da franquia."
           : "Não foi possível salvar. Seu rascunho foi mantido.",
       ),
       { code: error.code },

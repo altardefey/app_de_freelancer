@@ -1,0 +1,3 @@
+export const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+export const PHOTO_MAX_BASE64_LENGTH = 4 * Math.ceil(PHOTO_MAX_BYTES / 3);
+export const PHOTO_REQUEST_MAX_BYTES = PHOTO_MAX_BASE64_LENGTH + 16 * 1024;

@@ -1,24 +1,24 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, useWindowDimensions, View } from "react-native";
+import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import { useSession } from "../context/SessionContext";
-import { useSubscription } from "../context/SubscriptionContext";
 import { Logo } from "../components/Logo";
-import { colors, fonts, ui } from "./design";
-import { Button, Notice, Page } from "./components";
-export function Shell({ children }: { children: ReactNode }) {
+import { fonts } from "./design";
+import { HeaderTools, LoadingScreen, useAppearance } from "./Appearance";
+import { Button, Page } from "./components";
+const tabHighlight = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
+
+export function Shell({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
   const { role, user, loading } = useSession();
-  const { usage } = useSubscription();
+
   const pathname = usePathname();
-  if (loading)
-    return (
-      <SafeAreaView style={ui.page}>
-        <ActivityIndicator color={colors.purple} />
-      </SafeAreaView>
-    );
+  const { colors, ui } = useAppearance();
+  const { width } = useWindowDimensions();
+  const wide = Platform.OS === "web" && width >= 900;
+  if (loading) return <LoadingScreen />;
   if (!user || !role)
     return (
       <SafeAreaView style={ui.page}>
@@ -31,7 +31,7 @@ export function Shell({ children }: { children: ReactNode }) {
     );
   const tabs: {
     label: string;
-    href: "/" | "/orcamentos" | "/freela-plus" | "/conta";
+    href: "/" | "/orcamentos" | "/freela-plus" | "/conta" | "/historico";
     icon: keyof typeof Feather.glyphMap;
   }[] =
     role === "profissional"
@@ -39,12 +39,79 @@ export function Shell({ children }: { children: ReactNode }) {
           { label: "Início", href: "/", icon: "grid" },
           { label: "Orçamentos", href: "/orcamentos", icon: "file-text" },
           { label: "Freela+", href: "/freela-plus", icon: "zap" },
+          { label: "Histórico", href: "/historico", icon: "clock" },
           { label: "Conta", href: "/conta", icon: "user" },
         ]
       : [
           { label: "Explorar", href: "/", icon: "search" },
+          { label: "Histórico", href: "/historico", icon: "clock" },
           { label: "Conta", href: "/conta", icon: "user" },
         ];
+  const navigation = (
+      <View
+        style={{
+          backgroundColor: colors.white,
+          borderTopWidth: wide ? 0 : 1,
+          borderTopColor: colors.line,
+        }}
+      >
+        <View
+          accessibilityRole="tablist"
+          style={{
+            flexDirection: "row",
+            maxWidth: wide ? undefined : 620,
+            width: wide ? undefined : "100%",
+            alignSelf: "center",
+            gap: wide ? 4 : 0,
+          }}
+        >
+          {tabs.map((tab) => (
+            <Pressable
+              key={tab.href}
+              accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: pathname === tab.href }}
+              onPress={() => pathname !== tab.href && router.replace(tab.href)}
+              style={({ pressed }) => ({
+                flex: wide ? undefined : 1,
+                paddingHorizontal: wide ? 12 : 0,
+                flexDirection: wide ? "row" : "column",
+                minWidth: 0,
+                minHeight: wide ? 44 : 56,
+                opacity: pressed ? 0.7 : 1,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 3,
+              })}
+            >
+              <View style={{ width: wide ? 26 : 40, height: 28, alignItems: "center", justifyContent: "center" }}>
+                {pathname === tab.href && (
+                  <Animated.View entering={tabHighlight} pointerEvents="none" style={{
+                    position: "absolute", inset: 0, borderRadius: 14, backgroundColor: colors.lavender,
+                  }} />
+                )}
+              <Feather
+                name={tab.icon}
+                size={wide ? 17 : 20}
+                color={pathname === tab.href ? colors.purple : colors.muted}
+              />
+              </View>
+              <Text numberOfLines={1}
+                style={{
+                  fontFamily:
+                    pathname === tab.href ? fonts.medium : fonts.regular,
+                  fontSize: wide ? 13 : 11,
+                  color: colors.ink,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+  );
+
   return (
     <SafeAreaView style={ui.page} edges={["top", "bottom"]}>
       <View
@@ -67,129 +134,12 @@ export function Shell({ children }: { children: ReactNode }) {
           ]}
         >
           <Logo />
-          <View style={ui.badge}>
-            <Text style={ui.small}>
-              {role === "cliente"
-                ? "Área do cliente"
-                : usage?.premium
-                  ? "Freela+ ativo"
-                  : "Área do profissional"}
-            </Text>
-          </View>
+          {wide && navigation}
+          {actions ?? <HeaderTools />}
         </View>
       </View>
       <View style={ui.fill}>{children}</View>
-      <View
-        style={{
-          backgroundColor: colors.white,
-          borderTopWidth: 1,
-          borderTopColor: colors.line,
-        }}
-      >
-        <View
-          accessibilityRole="tablist"
-          style={{
-            flexDirection: "row",
-            maxWidth: 620,
-            width: "100%",
-            alignSelf: "center",
-            paddingVertical: 8,
-          }}
-        >
-          {tabs.map((tab) => (
-            <Pressable
-              key={tab.href}
-              accessibilityRole="tab"
-              accessibilityLabel={tab.label}
-              accessibilityState={{ selected: pathname === tab.href }}
-              onPress={() => pathname !== tab.href && router.replace(tab.href)}
-              style={{
-                flex: 1,
-                minHeight: 56,
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-              }}
-            >
-              <Feather
-                name={tab.icon}
-                size={21}
-                color={pathname === tab.href ? colors.ink : colors.muted}
-              />
-              <Text
-                style={{
-                  fontFamily:
-                    pathname === tab.href ? fonts.medium : fonts.regular,
-                  fontSize: 11,
-                  color: colors.ink,
-                }}
-              >
-                {tab.label}
-              </Text>
-              {pathname === tab.href ? (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    width: 22,
-                    height: 3,
-                    backgroundColor: colors.purple,
-                    borderRadius: 2,
-                  }}
-                />
-              ) : null}
-            </Pressable>
-          ))}
-        </View>
-      </View>
+      {!wide && navigation}
     </SafeAreaView>
-  );
-}
-export function AccountScreen() {
-  const { user, role, location, logout } = useSession();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  return (
-    <Shell>
-      <Page>
-        <Text style={ui.title}>Sua conta</Text>
-        <View style={[ui.card, { maxWidth: 560 }]}>
-          <Text style={ui.heading}>{user?.email}</Text>
-          <Text style={ui.body}>
-            {role === "profissional" ? "Profissional" : "Cliente"}
-          </Text>
-          <View style={ui.divider} />
-          <Text style={ui.body}>
-            {[location.neighborhood, location.city, location.uf]
-              .filter(Boolean)
-              .join(", ") || "Localização não informada"}
-          </Text>
-          {role === "profissional" ? (
-            <Button
-              title="Conhecer o Freela+"
-              secondary
-              onPress={() => router.push("/freela-plus")}
-            />
-          ) : null}
-          <Button
-            title="Sair da conta"
-            secondary
-            busy={busy}
-            onPress={async () => {
-              setBusy(true);
-              try {
-                await logout();
-                router.replace("/");
-              } catch {
-                setError("Não foi possível sair. Tente novamente.");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-          {error ? <Notice>{error}</Notice> : null}
-        </View>
-      </Page>
-    </Shell>
   );
 }

@@ -1,5 +1,5 @@
 // só pede os campos usados nas telas
-export const SERVICE_COLUMNS = "id,provider_id,title,category,provider,price,rating,description,uf,city,neighborhood,trending,recent";
-export const BUDGET_COLUMNS = "id,client,service,value,date,status,details,quote_amount,quote_message,created_at";
+export const SERVICE_COLUMNS = "id,provider_id,title,category,provider,price,rating,description,uf,city,neighborhood,trending,recent,remote,portfolio_path,portfolio_paths,fixed_price_cents,price_negotiable";
+export const BUDGET_COLUMNS = "id,client,service,value,date,status,details,quote_amount,quote_message,created_at,remote,agreed_price_cents,delivery";
 export const JOB_COLUMNS = "id,title,provider,date,rating,created_at";
 export const PROFILE_COLUMNS = "id,role,cep,street,neighborhood,uf,state_name,city";

@@ -1,6 +1,8 @@
 import { Text, View } from "react-native";
-import { colors, fonts } from "../ui/design";
+import { fonts } from "../ui/design";
+import { useAppearance } from "../ui/Appearance";
 export function Logo({ light = false }: { light?: boolean }) {
+  const { colors } = useAppearance();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <View
@@ -18,7 +20,7 @@ export function Logo({ light = false }: { light?: boolean }) {
             fontSize: 27,
             lineHeight: 32,
             fontFamily: fonts.bold,
-            color: colors.ink,
+            color: "#1F1633",
           }}
         >
           ƒ
@@ -29,7 +31,7 @@ export function Logo({ light = false }: { light?: boolean }) {
           fontFamily: fonts.bold,
           fontSize: 27,
           letterSpacing: -1.2,
-          color: light ? colors.white : colors.ink,
+          color: light ? "#FFFFFF" : colors.ink,
         }}
       >
         freela

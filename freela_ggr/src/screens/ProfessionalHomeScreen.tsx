@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Share, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import { useSession } from "../context/SessionContext";
@@ -8,36 +8,29 @@ import { listQuotes, type Quote } from "../data/quotes";
 import { listBudgets, submitBudgetQuote, updateBudgetStatus } from "../data/remote";
 import type { Budget, BudgetStatus } from "../types/app";
 import { Button, Empty, Field, Notice, Page } from "../ui/components";
-import { colors, fonts, ui } from "../ui/design";
+import { fonts } from "../ui/design";
+import { useAppearance } from "../ui/Appearance";
+import { QuoteShare } from "../components/QuoteShare";
 import { parseAmount } from "../security/quoteAmount";
 export const currency = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-export function quoteText(quote: Quote) {
-  return [
-    "Orçamento · Freela",
-    "Cliente: " + quote.client,
-    "",
-    quote.service,
-    "",
-    "Total: " + currency(quote.amount_cents),
-    "Criado em " + new Date(quote.created_at).toLocaleDateString("pt-BR"),
-  ].join("\n");
-}
 export function ProfessionalHomeScreen({
   quotesOnly = false,
 }: {
   quotesOnly?: boolean;
 }) {
+  const { colors, ui } = useAppearance();
   const { role } = useSession();
   const { usage, error: planError, refresh } = useSubscription();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [proposalError, setProposalError] = useState<{ id: string; message: string }>();
   const [filter, setFilter] = useState<"todos" | BudgetStatus>("todos");
   const [updating, setUpdating] = useState<string | null>(null);
   const lock = useRef(false);
-  const [drafts, setDrafts] = useState<Record<string, { value: string; message: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, { value?: string; message?: string; delivery?: string }>>({});
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -68,18 +61,23 @@ export function ProfessionalHomeScreen({
       setUpdating(null);
     }
   }
-  async function sendProposal(id: string) {
+  async function sendProposal(budget: Budget) {
+    const { id } = budget;
     if (lock.current) return;
     const draft = drafts[id];
-    const cents = parseAmount(draft?.value ?? "");
-    if (cents === null) { setError("Informe um valor válido para a proposta."); return; }
+    const cents = budget.agreedPriceCents ?? parseAmount(draft?.value ?? "");
+    const delivery = draft?.delivery?.trim();
+    if (!delivery) { setProposalError({ id, message: "Informe o prazo de entrega ou os dias disponíveis." }); return; }
+    if (cents === null) { setProposalError({ id, message: "Informe um valor válido para a proposta." }); return; }
     lock.current = true;
     setUpdating(id);
+    setProposalError(undefined);
     try {
-      await submitBudgetQuote(id, cents / 100, draft?.message ?? "");
-      setBudgets(old => old.map(b => b.id === id ? { ...b, status: "cotado", quoteAmount: cents / 100, quoteMessage: draft?.message, value: currency(cents) } : b));
-    } catch {
-      setError("Não foi possível enviar a proposta. Seus dados foram mantidos.");
+      await submitBudgetQuote(id, cents / 100, draft?.message ?? "", delivery);
+      setBudgets(old => old.map(b => b.id === id ? { ...b, status: "cotado", quoteAmount: cents / 100, quoteMessage: draft?.message, delivery, value: currency(cents) } : b));
+      await refresh();
+    } catch (failure) {
+      setProposalError({ id, message: failure instanceof Error ? failure.message : "Não foi possível salvar a proposta. Seus dados foram mantidos." });
     } finally {
       lock.current = false;
       setUpdating(null);
@@ -108,48 +106,33 @@ export function ProfessionalHomeScreen({
       <View style={ui.between}>
         <View style={{ gap: 8, maxWidth: "100%" }}>
           <Text style={ui.title}>
-            {quotesOnly ? "Seus orçamentos" : "Seu trabalho, em dia."}
-          </Text>
-          <Text style={ui.body}>
-            {quotesOnly
-              ? "Do que você sabe fazer ao que vai fechar."
-              : "Um lugar para organizar suas próximas oportunidades."}
+            {quotesOnly ? "Seus orçamentos" : "Painel profissional"}
           </Text>
         </View>
-        <Button
-          title="Novo orçamento"
-          icon="plus"
-          onPress={() => router.push("/novo-orcamento")}
-        />
+
       </View>
       {!quotesOnly ? (
         <View style={[ui.hero, { backgroundColor: colors.green }]}>
-          <Text style={ui.label}>Seu espaço para crescer</Text>
+          <Text style={[ui.label, { color: "#1F1633" }]}>Franquia de orçamentos</Text>
           <View style={ui.between}>
             <View style={{ flex: 1, minWidth: 120 }}>
               <Text
                 style={[
                   ui.heroTitle,
-                  { color: colors.ink, fontSize: 46, lineHeight: 52 },
+                  { color: "#1F1633", fontSize: 46, lineHeight: 52 },
                 ]}
               >
-                {usage?.premium
-                  ? "Sem limites."
-                  : usage
-                    ? Math.max(0, usage.limit - usage.used) + " de 5"
-                    : "Seu plano"}
+                {usage ? Math.max(0, usage.limit - usage.used) + " de " + usage.limit : "Seu plano"}
               </Text>
-              <Text style={[ui.body, { color: colors.ink }]}>
-                {usage?.premium
-                  ? "Orçamentos com seu Freela+."
-                  : "orçamentos disponíveis neste mês"}
+              <Text style={[ui.body, { color: "#1F1633" }]}>
+                orçamentos disponíveis neste mês
               </Text>
             </View>
-            <Feather name="file-text" size={48} color={colors.ink} />
+            <Feather name="file-text" size={48} color="#1F1633" />
           </View>
           <View style={{ height: 1, backgroundColor: "rgba(31,22,51,.18)" }} />
           <View style={ui.between}>
-            <Text style={[ui.small, { color: colors.ink }]}>
+            <Text style={[ui.small, { color: "#1F1633" }]}>
               {usage
                 ? "Franquia renova em " +
                   new Date(usage.resetsAt).toLocaleDateString("pt-BR", {
@@ -162,13 +145,14 @@ export function ProfessionalHomeScreen({
               onPress={() => router.push("/freela-plus")}
               style={{ minHeight: 44, justifyContent: "center" }}
             >
-              <Text style={[ui.label, { textDecorationLine: "underline" }]}>
+              <Text style={[ui.label, { textDecorationLine: "underline", color: "#1F1633" }]}>
                 {usage?.premium ? "Gerenciar Freela+" : "Conhecer o Freela+"}
               </Text>
             </Pressable>
           </View>
         </View>
       ) : null}
+      {!quotesOnly && <Button title="Gerenciar meus anúncios" secondary onPress={() => router.push("/meus-anuncios")} />}
       {planError ? (
         <>
           <Notice>{planError}</Notice>
@@ -193,53 +177,7 @@ export function ProfessionalHomeScreen({
         <ActivityIndicator color={colors.purple} />
       ) : (
         <>
-          <View style={{ gap: 16 }}>
-            <View style={ui.between}>
-              <Text style={ui.heading}>Orçamentos criados</Text>
-              <Text style={ui.small}>
-                {quotes.length}
-                {quotes.length === 100 ? " mais recentes" : " no histórico"}
-              </Text>
-            </View>
-            {!quotes.length ? (
-              <Empty
-                title="Seu primeiro orçamento começa aqui"
-                text="Adicione o cliente, descreva o serviço e informe o valor. Depois, compartilhe como preferir."
-                icon="file-text"
-              />
-            ) : (
-              quotes.map((quote) => (
-                <View key={quote.id} style={ui.card}>
-                  <View style={ui.between}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={ui.heading}>{quote.client}</Text>
-                      <Text style={ui.small}>
-                        {new Date(quote.created_at).toLocaleDateString("pt-BR")}
-                      </Text>
-                    </View>
-                    <Text style={[ui.heading, { color: colors.success }]}>
-                      {currency(quote.amount_cents)}
-                    </Text>
-                  </View>
-                  <Text style={ui.body}>{quote.service}</Text>
-                  <Button
-                    title="Compartilhar orçamento"
-                    icon="share-2"
-                    secondary
-                    onPress={() => {
-                      void Share.share({ message: quoteText(quote) }).catch(
-                        () =>
-                          setError(
-                            "Não foi possível compartilhar neste dispositivo.",
-                          ),
-                      );
-                    }}
-                  />
-                </View>
-              ))
-            )}
-          </View>
-          {!quotesOnly ? (
+          {(
             <View style={{ gap: 16 }}>
               <Text style={ui.heading}>Pedidos recebidos</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -297,18 +235,28 @@ export function ProfessionalHomeScreen({
                         <Text style={ui.body}>{b.details}</Text>
                       ) : null}
                       <Text style={ui.heading}>{b.value}</Text>
+                      {b.delivery && <Text style={ui.body}>Prazo ou disponibilidade: {b.delivery}</Text>}
                       {b.quoteMessage ? <Text style={ui.body}>{b.quoteMessage}</Text> : null}
+                      {b.quoteAmount != null && b.createdAt && <QuoteShare budgetId={b.id} quote={{
+                        client: b.client, service: b.service, amount_cents: Math.round(b.quoteAmount * 100),
+                        created_at: b.createdAt, remote: b.remote, note: b.quoteMessage, delivery: b.delivery, details: b.details,
+                      }} />}
                       {b.status === "solicitado" ? <>
-                        <Field label="Valor da proposta em reais" keyboardType="decimal-pad" value={drafts[b.id]?.value ?? ""} onChangeText={value => setDrafts(old => ({ ...old, [b.id]: { value, message: old[b.id]?.message ?? "" } }))} />
-                        <Field label="Mensagem da proposta" maxLength={2000} value={drafts[b.id]?.message ?? ""} onChangeText={message => setDrafts(old => ({ ...old, [b.id]: { message, value: old[b.id]?.value ?? "" } }))} />
+                        {b.agreedPriceCents == null ?
+                          <Field label="Valor da proposta (R$)" keyboardType="decimal-pad" value={drafts[b.id]?.value ?? ""} onChangeText={value => setDrafts(old => ({ ...old, [b.id]: { ...old[b.id], value } }))} /> :
+                          <Text style={ui.label}>Preço fixo do anúncio: {currency(b.agreedPriceCents)}</Text>}
+                        <Field label={b.remote ? "Prazo de entrega" : "Prazo ou dias disponíveis"} maxLength={200}
+                          value={drafts[b.id]?.delivery ?? ""} onChangeText={delivery => setDrafts(old => ({ ...old, [b.id]: { ...old[b.id], delivery } }))} />
+                        <Field label="Mensagem da proposta (opcional)" maxLength={600} value={drafts[b.id]?.message ?? ""} onChangeText={message => setDrafts(old => ({ ...old, [b.id]: { ...old[b.id], message } }))} />
                       </> : null}
                       {b.status === "solicitado" ? (
                         <>
+                          {proposalError?.id === b.id && <Notice>{proposalError.message}</Notice>}
                           <Button
-                            title="Enviar proposta"
+                            title="Salvar proposta"
                             busy={updating === b.id}
                             disabled={!!updating}
-                            onPress={() => void sendProposal(b.id)}
+                            onPress={() => void sendProposal(b)}
                           />
                           <Button
                             title="Recusar pedido"
@@ -331,7 +279,35 @@ export function ProfessionalHomeScreen({
                   ))
               )}
             </View>
-          ) : null}
+          )}
+          {!!quotes.length && (
+          <View style={{ gap: 16 }}>
+            <View style={ui.between}>
+              <Text style={ui.heading}>Orçamentos anteriores</Text>
+              <Text style={ui.small}>
+                {quotes.length}
+                {quotes.length === 100 ? " mais recentes" : " no histórico"}
+              </Text>
+            </View>
+            {              quotes.map((quote) => (
+                <View key={quote.id} style={ui.card}>
+                  <View style={ui.between}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={ui.heading}>{quote.client}</Text>
+                      <Text style={ui.small}>
+                        {new Date(quote.created_at).toLocaleDateString("pt-BR")}
+                      </Text>
+                    </View>
+                    <Text style={[ui.heading, { color: colors.success }]}>
+                      {currency(quote.amount_cents)}
+                    </Text>
+                  </View>
+                  <Text style={ui.body}>{quote.service}</Text>
+                  <QuoteShare quote={quote} />
+                </View>
+              ))}
+          </View>
+          )}
         </>
       )}
     </Page>

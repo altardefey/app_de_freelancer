@@ -1,4 +1,4 @@
--- Apply after security-hardening.sql and rate-limits.sql.
+-- roda depois do security-hardening.sql e do rate-limits.sql
 begin;
 
 alter table public.budgets
@@ -20,7 +20,7 @@ alter table public.budgets drop constraint if exists budgets_status_check;
 alter table public.budgets drop constraint if exists budgets_quote_amount_check;
 alter table public.budgets drop constraint if exists budgets_details_length_check;
 alter table public.budgets drop constraint if exists budgets_quote_message_length_check;
--- Existing "pendente" records had already been accepted by the professional.
+-- nos pedidos antigos, pendente já significava que o profissional tinha aceitado
 update public.budgets set status = 'em_andamento' where status = 'pendente';
 alter table public.budgets add constraint budgets_status_check
   check (status in ('solicitado', 'cotado', 'aceito', 'em_andamento', 'realizado', 'recusado', 'cancelado')) not valid;

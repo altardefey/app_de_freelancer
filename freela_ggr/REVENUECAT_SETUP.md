@@ -3,7 +3,7 @@
 ## O que está implementado
 - Interface React Native com Rubik e tema claro.
 - Login, cadastro, catálogo, pedidos, painel profissional, conta, criação de orçamento e Freela+.
-- Cinco **orçamentos criados pelo profissional** por mês civil, no fuso America/Sao_Paulo. Solicitações de clientes não consomem essa franquia.
+- Dez **orçamentos criados pelo profissional** por mês civil, no fuso America/Sao_Paulo. Solicitações de clientes não consomem essa franquia.
 - Freela+ mensal: preço planejado R$ 14,99; o app mostra o preço localizado real devolvido pela loja.
 - Orçamentos do profissional ficam em professional_quotes; pedidos de clientes continuam em budgets.
 - Contador transacional no banco, por usuário e mês. Não depende do relógio do aparelho nem de um booleano enviado pelo cliente.
@@ -68,7 +68,7 @@ Valide no aparelho:
 - Pagamento pendente, ausência de internet e retomada.
 - Atualização do plano após webhook e restauração.
 - Expiração, cancelamento, reembolso e transferência.
-- Cinco orçamentos grátis; sexto bloqueado; sexto permitido com assinatura verificada.
+- Dez orçamentos por mês, inclusive para assinantes. O décimo primeiro fica bloqueado.
 - Mesma conta em dois aparelhos; tentativa repetida após falha de conexão.
 - Teclado e compartilhamento nativo em Android e iOS.
 
@@ -95,7 +95,7 @@ A chave Test Store enviada foi configurada em .env.local para iOS e Android (arq
 O identificador de entitlement agora é **freela**, no app e na Edge Function. O product ID pode continuar freela_plus_monthly; produto e entitlement são identificadores diferentes.
 
 O app configura o SDK ao entrar com uma conta profissional, usando o UUID do Supabase como appUserID. Logs VERBOSE são usados apenas no desenvolvimento.
-“Assinar Freela+” abre o paywall nativo da Offering atual. Compra/restauração verificam CustomerInfo.entitlements.active.freela e sincronizam com o servidor antes de liberar a franquia ilimitada.
+“Assinar Freela+” abre o paywall nativo da Offering atual. Compra/restauração verificam CustomerInfo.entitlements.active.freela e sincronizam com o servidor antes de liberar os benefícios do plano.
 Fechar/cancelar o paywall não concede acesso. A página Freela+ foi mantida.
 
 Para testar agora:

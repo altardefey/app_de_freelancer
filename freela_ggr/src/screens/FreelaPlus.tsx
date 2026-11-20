@@ -21,8 +21,10 @@ import {
   REVENUECAT_ENTITLEMENT,
 } from "../lib/billing";
 import { Button, Notice, Page } from "../ui/components";
-import { colors, fonts, ui } from "../ui/design";
+import { fonts } from "../ui/design";
+import { useAppearance } from "../ui/Appearance";
 export default function FreelaPlus() {
+  const { colors, ui } = useAppearance();
   const { user, role } = useSession();
   const { usage, sync, refresh } = useSubscription();
   const { width } = useWindowDimensions();
@@ -70,7 +72,7 @@ export default function FreelaPlus() {
       const verified = await getUsage();
       setMessage(
         verified.premium
-          ? "Freela+ ativo. Seus próximos orçamentos não têm limite."
+          ? "Freela+ ativo. Você já pode usar os benefícios do plano."
           : "Compra recebida. A confirmação do seu plano ainda está sendo atualizada. Use “Atualizar plano” em instantes.",
       );
     } catch (error) {
@@ -118,7 +120,7 @@ export default function FreelaPlus() {
           <Text style={ui.small}>
             {usage?.premium
               ? "Seu plano está ativo"
-              : "Mais liberdade para trabalhar"}
+              : "Assinatura mensal"}
           </Text>
         </View>
       </View>
@@ -160,12 +162,10 @@ export default function FreelaPlus() {
                 },
               ]}
             >
-              Seu talento{"\n"}não tem limite.{"\n"}Seus orçamentos{"\n"}também
-              não.
+              Plano Freela+
             </Text>
             <Text style={[ui.heroBody, { maxWidth: 380 }]}>
-              Dê espaço para o próximo trabalho. Crie quantos orçamentos
-              precisar com o Freela+.
+              Até 10 fotos por serviço e identificação Freela+ no catálogo.
             </Text>
           </View>
           <View
@@ -193,7 +193,8 @@ export default function FreelaPlus() {
             </View>
             <View style={ui.divider} />
             {[
-              "Orçamentos sem limite mensal",
+              "Até 10 fotos por serviço",
+              "Identificação Freela+ no catálogo",
               "Histórico dos seus orçamentos",
               "Compartilhamento com clientes",
             ].map((text) => (
@@ -208,8 +209,8 @@ export default function FreelaPlus() {
               <Text style={ui.body}>Disponível para contas profissionais.</Text>
             ) : usage?.premium ? (
               <Button
-                title="Criar um orçamento"
-                onPress={() => router.push("/novo-orcamento")}
+                title="Ver orçamentos"
+                onPress={() => router.push("/orcamentos")}
               />
             ) : (
               <Button
@@ -239,11 +240,13 @@ export default function FreelaPlus() {
       </View>
       {message ? <Notice>{message}</Notice> : null}
       <View style={{ gap: 16 }}>
-        <Text style={ui.heading}>Escolha o ritmo do seu negócio.</Text>
+        <Text style={ui.heading}>Comparar planos</Text>
         <View style={[ui.card, { padding: 0, overflow: "hidden" }]}>
           {[
             ["O que está incluído", "Grátis", "Freela+"],
-            ["Orçamentos por mês", "5", "Ilimitados"],
+            ["Orçamentos por mês", "10", "10"],
+            ["Fotos por serviço", "3", "10"],
+            ["Identificação Freela+", "—", "Sim"],
             ["Histórico e compartilhamento", "Sim", "Sim"],
             ["Mensalidade", "R$ 0", offer?.product.priceString ?? "R$ 14,99"],
           ].map((row, i) => (
@@ -271,7 +274,7 @@ export default function FreelaPlus() {
           ))}
         </View>
         <Text style={ui.small}>
-          A franquia grátis renova no primeiro dia de cada mês, no horário de
+          A franquia renova no primeiro dia de cada mês, no horário de
           Brasília. Orçamentos não usados não acumulam. Seu histórico continua
           disponível após cancelar.
         </Text>

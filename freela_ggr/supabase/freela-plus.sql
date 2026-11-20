@@ -41,6 +41,7 @@ create table if not exists private.quote_usage (
   used integer not null default 0,
   primary key(user_id,month)
 );
+alter table private.quote_usage enable row level security;
 revoke all on private.quote_usage from public, anon, authenticated;
 
 create or replace function private.enforce_quote_quota() returns trigger
@@ -48,7 +49,6 @@ language plpgsql security definer set search_path = '' as $$
 declare
   period date := date_trunc('month', now() at time zone 'America/Sao_Paulo')::date;
   consumed integer;
-  premium boolean;
 begin
   if auth.uid() is null or auth.uid() <> new.user_id then
     raise insufficient_privilege using message = 'Quote owner must match authenticated user';
@@ -59,8 +59,7 @@ begin
   if exists(select 1 from public.professional_quotes where user_id=new.user_id and request_id=new.request_id) then
     raise unique_violation using message = 'Quote already created';
   end if;
-  select exists(select 1 from public.freela_subscriptions where user_id=new.user_id and active and (expires_at is null or expires_at > now())) into premium;
-  if not premium and consumed >= 5 then
+  if consumed >= 10 then
     raise sqlstate 'PT402' using message = 'Monthly quote limit reached';
   end if;
   update private.quote_usage set used=used+1 where user_id=new.user_id and month=period;
@@ -80,7 +79,7 @@ begin
   if owner is null then raise insufficient_privilege; end if;
   return jsonb_build_object(
     'used', coalesce((select used from private.quote_usage where user_id=owner and month=period),0),
-    'limit',5,
+    'limit',10,
     'premium',exists(select 1 from public.freela_subscriptions where user_id=owner and active and (expires_at is null or expires_at > now())),
     'resetsAt', ((period + interval '1 month')::timestamp at time zone 'America/Sao_Paulo')
   );

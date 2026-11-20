@@ -11,5 +11,4 @@ describe('searchTools', () => {
   });
 });
 
-//OBS: rodar o commando "npm install -D jest jest-expo @types/jest"
-// Em caso de erro, acrescentar em "tsconfig.json" a propriedade "types": ["jest", "react-native"]
+// para rodar este teste, instale jest e jest-expo como dependências de desenvolvimento

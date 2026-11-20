@@ -1,9 +1,5 @@
-import { Shell } from "../ui/Shell";
-import NovoOrcamento from "../screens/NovoOrcamento";
+import { Redirect } from "expo-router";
+
 export default function NewQuotePage() {
-  return (
-    <Shell>
-      <NovoOrcamento />
-    </Shell>
-  );
+  return <Redirect href="/orcamentos" />;
 }

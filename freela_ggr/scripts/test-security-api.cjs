@@ -8,10 +8,15 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 }).outputText, filename);
 let user = null;
 let failure = null;
+let uploaded;
+let uploadFailure = null;
 const session = { access_token: 'access-test-token', refresh_token: 'refresh-test-token', expires_in: 3600 };
 const original = Module._load;
 Module._load = function (name, ...args) {
-  if (name === '@supabase/supabase-js') return { createClient: () => ({ auth: {
+  if (name === '@supabase/supabase-js') return { createClient: () => ({ storage: { from: bucket => ({ upload: async (path, file) => {
+    uploaded = { bucket, path, file };
+    return { error: uploadFailure };
+  } }) }, auth: {
     getUser: async () => ({ data: { user }, error: null }),
     refreshSession: async () => ({ data: { session: null, user: null } }),
     signInWithPassword: async () => ({ data: { session, user: { id: 'user-1', email: 'a@b.com', user_metadata: { private: 'do not leak' } } }, error: failure }),
@@ -57,12 +62,32 @@ async function call(action, payload = {}, extra = {}) {
   assert.equal(limited.status, 429); assert.doesNotMatch(JSON.stringify(limited.body), /sensitive/);
   assert.throws(() => validation.budgetInput({ client: 'a', service: 'b', value: '1', user_id: 'attacker' }));
   assert.equal(validation.budgetInput({ client: 'a', service: 'b', value: 'R$ 1', details: '' }).details, '');
-  assert.deepEqual(validation.quoteInput({ id: '00000000-0000-0000-0000-000000000001', quoteAmount: 129.99 }), {
-    id: '00000000-0000-0000-0000-000000000001', quote_amount: 129.99, quote_message: null,
+  assert.deepEqual(validation.quoteInput({ id: '00000000-0000-0000-0000-000000000001', quoteAmount: 129.99, delivery: "3 dias" }), {
+    id: '00000000-0000-0000-0000-000000000001', quote_amount: 129.99, delivery: "3 dias", quote_message: null,
   });
   assert.throws(() => validation.quoteInput({ id: '00000000-0000-0000-0000-000000000001', quoteAmount: 0 }));
+  assert.throws(() => validation.quoteInput({ id: "00000000-0000-0000-0000-000000000001", quoteAmount: 129.99 }));
   assert.throws(() => validation.rating(6));
   assert.throws(() => validation.uuid("' or true --"));
   assert.throws(() => validation.password('x'.repeat(73), true));
+  const id = '00000000-0000-0000-0000-000000000001';
+  user = { id };
+  const auth = { cookie: '__Host-freela-access0=access-test-token' };
+  const jpeg = Buffer.alloc(1024 * 1024);
+  jpeg.set([255, 216, 255]);
+  jpeg.set([255, 217], jpeg.length - 2);
+  assert.equal((await call('uploadProfileAvatar', { id, image: jpeg.toString('base64') }, auth)).status, 200);
+  assert.equal(uploaded.bucket, 'service-portfolio');
+  assert.equal(uploaded.path, id + '/avatar-' + id + '.jpg');
+  assert.equal(uploaded.file.type, 'image/jpeg');
+  assert.deepEqual(Buffer.from(await uploaded.file.arrayBuffer()), jpeg);
+  assert.equal((await call('uploadProfileAvatar', { id, image: 'abcd' }, auth)).status, 400);
+  const photo = { id, photoId: id, image: jpeg.toString('base64') };
+  assert.equal((await call('uploadPortfolioPhoto', photo, auth)).status, 200);
+  assert.equal(uploaded.path, id + '/' + id + '-' + id + '.jpg');
+  uploadFailure = { status: 400, statusCode: 'AccessDenied', message: 'new row violates row-level security policy' };
+  const denied = await call('uploadPortfolioPhoto', photo, auth);
+  assert.equal(denied.status, 400);
+  assert.match(denied.body.error.message, /recusou a permissão/);
   console.log('PASS: csrf, https, corpo limitado, autenticação, cookies, respostas sem tokens, captcha obrigatório, validação e erros seguros.');
 })().catch(error => { console.error(error); process.exitCode=1; });

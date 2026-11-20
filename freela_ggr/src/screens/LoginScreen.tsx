@@ -1,23 +1,21 @@
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
-import { Logo } from "../components/Logo";
 import { BotCheck } from "../components/BotCheck";
+import { Logo } from "../components/Logo";
+import { PasswordRecovery } from "../components/PasswordRecovery";
 import { useSession } from "../context/SessionContext";
+import { LoadingScreen, useAppearance } from "../ui/Appearance";
 import { Button, Field, Notice, Page } from "../ui/components";
-import { colors, fonts, ui } from "../ui/design";
-import type { Role } from "../types/app";
 
 export function LoginScreen() {
+  const { ui } = useAppearance();
   const { login, resendConfirmation, loading, openRegister } = useSession();
-  const { width } = useWindowDimensions();
-  const [role, setRole] = useState<Role>("profissional");
+  const [recovering, setRecovering] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -39,11 +37,11 @@ export function LoginScreen() {
       const result = resend
         ? await resendConfirmation(email.trim(), token)
         : await login({
-            role,
             email: email.trim(),
             password,
             captchaToken: token,
           });
+      if (!resend) setConfirmationPending(result.pendingConfirmation === true);
       if (result.message) setMessage(result.message);
     } catch {
       setMessage(
@@ -55,129 +53,21 @@ export function LoginScreen() {
       setReset((value) => value + 1);
     }
   }
-  if (loading)
-    return (
-      <Page>
-        <Logo />
-        <ActivityIndicator color={colors.purple} />
-      </Page>
-    );
+  if (loading) return <LoadingScreen />;
+  if (recovering) return <PasswordRecovery initialEmail={email} close={() => setRecovering(false)} />;
   return (
     <Page>
-      <View style={ui.between}>
+      <View style={ui.form}>
         <Logo />
-        <Text style={ui.small}>Seu trabalho. Seu próximo passo.</Text>
-      </View>
-      <View
-        style={{
-          flexDirection: width >= 850 ? "row" : "column",
-          gap: 32,
-          alignItems: "stretch",
-          marginTop: width >= 850 ? 32 : 0,
-        }}
-      >
-        <View
-          style={[
-            ui.hero,
-            {
-              flex: width >= 850 ? 1 : undefined,
-              justifyContent: "space-between",
-              minHeight: width >= 850 ? 550 : undefined,
-            },
-          ]}
-        >
-          <View style={{ gap: 20 }}>
-            <View
-              style={[
-                ui.badge,
-                { alignSelf: "flex-start", backgroundColor: "#362D49" },
-              ]}
-            >
-              <Text style={[ui.label, { color: colors.green }]}>
-                Mais espaço para o seu talento
-              </Text>
-            </View>
-            <Text
-              style={[
-                ui.heroTitle,
-                {
-                  fontSize: width >= 850 ? 56 : 32,
-                  lineHeight: width >= 850 ? 59 : 37,
-                },
-              ]}
-            >
-              Bom trabalho.{"\n"}Novos caminhos.
-            </Text>
-            <Text style={[ui.heroBody, { maxWidth: 360 }]}>
-              Encontre profissionais perto de você ou transforme suas
-              habilidades no próximo serviço fechado.
-            </Text>
-          </View>
-          <View
-            style={{
-              marginTop: 28,
-              gap: 12,
-              display: width >= 850 ? "flex" : "none",
-            }}
-          >
-            <View style={{ height: 1, backgroundColor: "#4C405F" }} />
-            <View style={ui.row}>
-              <Feather name="file-text" size={22} color={colors.green} />
-              <Text style={ui.heroBody}>Do primeiro contato ao orçamento.</Text>
-            </View>
-          </View>
-        </View>
-        <View
-          style={[
-            ui.card,
-            {
-              flex: width >= 850 ? 1 : undefined,
-              justifyContent: "center",
-              padding: width >= 850 ? 36 : 24,
-              gap: 22,
-            },
-          ]}
-        >
+        <View style={ui.card}>
           <View style={{ gap: 8 }}>
-            <Text style={ui.title}>Vamos começar?</Text>
+            <Text style={ui.title}>Entre no Freela</Text>
             <Text style={ui.body}>Entre na sua conta para continuar.</Text>
-          </View>
-          <View
-            accessibilityRole="tablist"
-            style={[
-              ui.row,
-              { backgroundColor: colors.canvas, borderRadius: 28, padding: 4 },
-            ]}
-          >
-            {(["profissional", "cliente"] as Role[]).map((item) => (
-              <Pressable
-                key={item}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: role === item }}
-                onPress={() => setRole(item)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 24,
-                  alignItems: "center",
-                  backgroundColor: role === item ? colors.ink : "transparent",
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: fonts.medium,
-                    color: role === item ? colors.white : colors.muted,
-                  }}
-                >
-                  {item === "cliente" ? "Sou cliente" : "Sou profissional"}
-                </Text>
-              </Pressable>
-            ))}
           </View>
           <Field
             label="E-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => { setEmail(value); setConfirmationPending(false); }}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -200,7 +90,8 @@ export function LoginScreen() {
             onPress={() => void submit()}
             icon="arrow-right"
           />
-          <Pressable
+          <Button title="Esqueci minha senha" secondary disabled={busy} onPress={() => { setToken(undefined); setMessage(""); setRecovering(true); }} />
+          {confirmationPending && <Pressable
             accessibilityRole="button"
             disabled={busy}
             onPress={() => void submit(true)}
@@ -214,7 +105,7 @@ export function LoginScreen() {
             >
               Reenviar e-mail de confirmação
             </Text>
-          </Pressable>
+          </Pressable>}
           <View style={ui.divider} />
           <Button
             title="Criar uma conta grátis"
@@ -223,9 +114,6 @@ export function LoginScreen() {
           />
         </View>
       </View>
-      <Text style={[ui.small, { textAlign: "center" }]}>
-        Feito para quem faz acontecer.
-      </Text>
     </Page>
   );
 }

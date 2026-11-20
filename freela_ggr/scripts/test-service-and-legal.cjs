@@ -1,0 +1,173 @@
+const { PGlite } = require("@electric-sql/pglite");
+const { readFileSync } = require("node:fs");
+const assert = require("node:assert/strict");
+
+(async () => {
+  const db = new PGlite();
+  const sql = (name) => readFileSync("supabase/" + name, "utf8").replace(/^\uFEFF/, "");
+  await db.exec(`
+    create role anon;
+    create role authenticated;
+    create role service_role;
+    create schema auth;
+    create table auth.users(id uuid primary key, raw_user_meta_data jsonb);
+    create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
+    create schema storage;
+    create table storage.buckets(id text primary key, name text, public boolean, file_size_limit int, allowed_mime_types text[]);
+    create table storage.objects(name text, bucket_id text);
+    alter table storage.objects enable row level security;
+    create function storage.foldername(text) returns text[] language sql as $$ select string_to_array($1,'/') $$;
+    grant usage on schema public,auth,storage to anon,authenticated;
+    grant select,insert,delete on storage.objects to authenticated;
+  `);
+  await db.exec(sql("schema.sql").replace('create extension if not exists "pgcrypto";', ""));
+  for (const name of ["security-hardening.sql", "rate-limits.sql", "freela-plus.sql", "budget-workflow.sql"]) await db.exec(sql(name));
+  const id = "00000000-0000-0000-0000-000000000001";
+  const legacy = "00000000-0000-0000-0000-000000000002";
+  const service = "00000000-0000-0000-0000-000000000003";
+  const path = id + "/" + service + ".jpg";
+  const version = "2026-11-09.1";
+  const signup = (user, legalVersion, role, adult) => db.query("insert into auth.users values($1,$2)", [
+    user, JSON.stringify({ role, services: [], legal_version: legalVersion, adult }),
+  ]);
+  await signup(legacy, undefined, "cliente");
+  await db.exec(sql("service-and-legal.sql"));
+  await db.exec(sql("service-and-legal.sql"));
+  await assert.rejects(signup(id, undefined, "profissional"), /Aceite os Termos/);
+  await db.exec(sql("signup-adult.sql"));
+  await assert.rejects(signup(id, version, "profissional"), /18 anos/);
+  await assert.rejects(signup(id, version, "profissional", "true"), /18 anos/);
+  await signup(id, version, "profissional", true);
+  async function as(user) {
+    await db.exec(`reset role; set test.uid='${user}'; set role authenticated`);
+  }
+  async function accepted() {
+    return (await db.query("select public.legal_status() as status")).rows[0].status.accepted;
+  }
+  await db.exec(sql("account-portfolio-contact.sql"));
+  await db.exec(sql("account-portfolio-contact.sql"));
+  await db.exec(sql("profile-settings.sql"));
+  await db.exec(sql("profile-settings.sql"));
+  await as(id);
+  assert.equal(await accepted(), true);
+  await db.query("insert into storage.objects values ($1, 'service-portfolio')", [path]);
+  await db.query(`insert into public.services(id,provider_id,title,category,provider,price,description,uf,city,neighborhood,remote,portfolio_path)
+    values ($1,$2,'Arte digital','Arte digital','Profissional','R$ 50','Ilustração','','','',true,$3)`, [service,id,path]);
+  await db.query("update public.profiles set bio='Ilustração editorial', instagram_url='https://instagram.com/arte', whatsapp_business='11900000000' where id=$1", [id]);
+  await as(legacy);
+  await assert.rejects(db.query("update public.profiles set bio='Bio' where id=$1", [legacy]), /freela_public_profile_fields/);
+  const card = (await db.query("select public.professional_card($1) as card", [id])).rows[0].card;
+  assert.equal(card.whatsapp_business, "11900000000");
+  assert.equal(card.bio, "Ilustração editorial");
+  assert.equal(card.whatsapp, undefined);
+  assert.equal(await accepted(), false);
+  await assert.rejects(db.query("select public.accept_legal('old')"), /indisponível/);
+  await db.query("select public.accept_legal($1)", [version]);
+  await db.query("select public.accept_legal($1)", [version]);
+  assert.equal(await accepted(), true);
+  await assert.rejects(db.query("insert into storage.objects values ($1, 'service-portfolio')", [path]), /row-level security/);
+  assert.equal((await db.query("select * from storage.objects")).rows.length, 1);
+  await db.query(`insert into public.budgets(user_id,professional_id,service_id,client,service,value,status)
+    values ($1,$2,$3,'Cliente','Arte digital','R$ 50','solicitado')`, [legacy,id,service]);
+  assert.equal((await db.query("select remote from public.budgets")).rows[0].remote, true);
+  await db.query("update public.profiles set whatsapp='11912345678' where id=$1", [legacy]);
+  const request = (await db.query(`insert into public.budgets(user_id,professional_id,service_id,client,service,value,status,share_contact,whatsapp)
+    values ($1,$2,$3,'Cliente','Arte digital','R$ 50','solicitado',true,'21912345678') returning id`, [legacy,id,service])).rows[0].id;
+  const contact = async () => (await db.query("select public.budget_contact($1) as phone", [request])).rows[0].phone;
+  assert.equal(await contact(), null);
+  await as(id);
+  assert.equal(await contact(), null);
+  await db.query("update public.budgets set status='cotado',quote_amount=50 where id=$1", [request]);
+  assert.equal(await contact(), "11912345678");
+  await as(legacy);
+  assert.equal(await contact(), null);
+  await as(id);
+  const gallery = Array.from({ length: 10 }, (_, i) => `${id}/${service}-${i + 1}.jpg`);
+  for (const photo of gallery) await db.query("insert into storage.objects values ($1,'service-portfolio')", [photo]);
+  const saveGallery = (photos) => db.query("update public.services set portfolio_path=null,portfolio_paths=$1 where id=$2", [photos,service]);
+  await saveGallery(gallery.slice(0,3));
+  await assert.rejects(saveGallery(gallery.slice(0,4)), /Limite de fotos/);
+  await db.exec("reset role");
+  await db.query("insert into public.freela_subscriptions(user_id,active) values($1,true)", [id]);
+  await as(id);
+  await saveGallery(gallery);
+  await as(legacy);
+  assert.equal((await db.query("select * from storage.objects")).rows.length, 10);
+  assert.equal((await db.query("select public.catalog_premium_providers($1::uuid[]) as provider", [[id]])).rows[0].provider, id);
+  await db.exec(`reset role; update private.legal_releases set required=false;
+    insert into private.legal_releases(version,required) values ('v2',true)`);
+  await as(legacy);
+  assert.equal(await accepted(), false);
+  await db.query("select public.accept_legal('v2')");
+  await db.exec("reset role");
+  assert.equal((await db.query("select * from private.legal_acceptances where user_id=$1", [legacy])).rows.length, 2);
+  await db.exec(sql("order-quotes.sql"));
+  await db.exec(sql("order-quotes.sql"));
+  const newcomer = "00000000-0000-0000-0000-000000000010";
+  await assert.rejects(signup(newcomer, "v2", "cliente", true), /primeiro nome/);
+  await db.query("insert into auth.users values($1,$2)", [newcomer, JSON.stringify({
+    role: "cliente", services: [], legal_version: "v2", adult: true, first_name: "Marina", whatsapp: "11911112222",
+  })]);
+  assert.equal((await db.query("select first_name from public.profiles where id=$1", [newcomer])).rows[0].first_name, "Marina");
+  await as(id);
+  await db.query("update public.services set fixed_price_cents=12550 where id=$1", [service]);
+  await as(newcomer);
+  const avatar = newcomer + "/avatar-00000000-0000-0000-0000-000000000011.jpg";
+  await db.query("insert into storage.objects values ($1, 'service-portfolio')", [avatar]);
+  await db.query("update public.profiles set avatar_path=$1 where id=$2", [avatar,newcomer]);
+  await as(id);
+  assert.equal((await db.query("select count(*)::int as count from storage.objects where name=$1", [avatar])).rows[0].count, 0);
+  await as(newcomer);
+  const order = (details) => db.query(`insert into public.budgets(user_id,professional_id,service_id,client,service,value,status,details)
+    values ($1,$2,$3,'Nome incorreto','Arte digital','R$ 50','solicitado',$4) returning id,client,agreed_price_cents`, [newcomer,id,service,details]);
+  await assert.rejects(order(""), /Descreva o serviço/);
+  const requested = (await order("Ilustração para um cartaz")).rows[0];
+  assert.equal(requested.client, "Marina");
+  assert.equal(requested.agreed_price_cents, 12550);
+  await as(id);
+  const proposal = (amount, delivery) => db.query("update public.budgets set status='cotado',quote_amount=$1,delivery=$2 where id=$3", [amount,delivery,requested.id]);
+  await assert.rejects(proposal(125.50, null), /prazo/);
+  await assert.rejects(proposal(10, "3 dias"), /valor fixo/);
+  await proposal(125.50, "3 dias");
+  assert.equal((await db.query("select public.budget_contact($1) as phone", [requested.id])).rows[0].phone, "11911112222");
+  assert.equal((await db.query("select count(*)::int as count from public.professional_quotes where source_budget_id=$1", [requested.id])).rows[0].count, 1);
+  assert.equal((await db.query("select public.freela_usage() as usage")).rows[0].usage.used, 1);
+  await db.exec("reset role");
+  await db.exec(sql("service-booking.sql"));
+  await db.exec(sql("service-booking.sql"));
+  await as(id);
+  await db.query("update public.profiles set first_name='Ana' where id=$1", [id]);
+  await as(legacy);
+  assert.equal((await db.query("select public.catalog_provider_names($1::uuid[]) as names", [[id]])).rows[0].names[id], "Ana");
+  const other = (await db.query(`insert into public.budgets(user_id,professional_id,service_id,client,service,value,status,details)
+    values ($1,$2,$3,'Cliente','Arte digital','R$ 50','solicitado','Outro cartaz') returning id`, [legacy,id,service])).rows[0].id;
+  await as(id);
+  await db.query("update public.budgets set status='cotado',quote_amount=125.50,delivery='3 dias' where id=$1", [other]);
+  await as(newcomer);
+  await db.query("update public.budgets set status='aceito' where id=$1", [requested.id]);
+  assert.equal((await db.query("select id from public.services where id=$1", [service])).rows.length, 1);
+  await order("Novo pedido no mesmo anúncio");
+  await as(legacy);
+  assert.equal((await db.query("select id from public.services where id=$1", [service])).rows.length, 1);
+  assert.equal((await db.query("select id from public.budgets where id=$1", [other])).rows.length, 1);
+  await db.query("update public.budgets set status='aceito' where id=$1", [other]);
+  await db.exec("reset role; set test.uid=''; set role anon");
+  assert.equal((await db.query("select id from public.services where id=$1", [service])).rows.length, 1);
+  await as(id);
+  await db.query("update public.budgets set status='em_andamento' where id=$1", [requested.id]);
+  await db.query("update public.budgets set status='realizado' where id=$1", [requested.id]);
+  await as(legacy);
+  assert.equal((await db.query("select id from public.services where id=$1", [service])).rows.length, 1);
+  await db.exec("reset role; update private.quote_usage set used=10");
+  await as(legacy);
+  assert.equal((await db.query("select public.catalog_unavailable_providers($1::uuid[]) as provider", [[id]])).rows[0].provider, id);
+  assert.equal((await db.query("select id from public.services where id=$1", [service])).rows.length, 1);
+  await as(newcomer);
+  await assert.rejects(order("Pedido depois do décimo orçamento"), (error) => error.code === "PT409");
+  await db.exec("reset role; update private.quote_usage set month=month-interval '1 month'");
+  await as(newcomer);
+  assert.equal((await db.query("select public.catalog_unavailable_providers($1::uuid[])", [[id]])).rows.length, 0);
+  await order("Pedido no mês seguinte");
+  await db.close();
+  console.log("PASS: cadastro, aceite versionado e reaplicação, portfólio com RLS e modalidade do pedido.");
+})().catch((error) => { console.error(error); process.exit(1); });

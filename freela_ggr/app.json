@@ -30,12 +30,15 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F5F6F2",
+          "dark": { "backgroundColor": "#181322" },
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sharing",
+      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false, "photosPermission": "Permitir que o Freela use a foto que você selecionar para o portfólio." }]
     ],
     "experiments": {
       "typedRoutes": true,

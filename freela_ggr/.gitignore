@@ -53,3 +53,8 @@ security-scan-results/
 test-results/
 playwright-report/
 /output/native-check/
+
+# Ferramentas locais e arquivos de trabalho da documentação
+/.agents/
+/tmp/
+/output/pdf/

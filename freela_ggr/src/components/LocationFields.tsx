@@ -22,7 +22,8 @@ import {
 } from "../data/viacep";
 import { emptyLocation, type LocationValue } from "../types/app";
 import { normalize } from "../utils/searchTools";
-import { locationStyles as styles } from "./LocationFields.styles";
+import { useAppearance } from "../ui/Appearance";
+import { locationStyles, darkLocationStyles } from "./LocationFields.styles";
 
 export type { LocationValue };
 export { emptyLocation };
@@ -38,6 +39,8 @@ export function LocationFields({
   compact?: boolean;
   showStreet?: boolean;
 }) {
+  const { dark } = useAppearance();
+  const styles = dark ? darkLocationStyles : locationStyles;
   const [open, setOpen] = useState<"state" | "city" | "neighborhood" | null>(
     null,
   );

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,7 +11,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { colors, ui } from "./design";
+import { useAppearance } from "./Appearance";
 
 export function Button({
   title,
@@ -28,6 +28,7 @@ export function Button({
   secondary?: boolean;
   icon?: keyof typeof Feather.glyphMap;
 }) {
+  const { ui } = useAppearance();
   return (
     <Pressable
       accessibilityRole="button"
@@ -42,15 +43,16 @@ export function Button({
       ]}
     >
       {busy ? (
-        <ActivityIndicator color={colors.ink} />
+        <ActivityIndicator color="#1F1633" />
       ) : icon ? (
-        <Feather name={icon} size={19} color={colors.ink} />
+        <Feather name={icon} size={19} color="#1F1633" />
       ) : null}
       <Text style={ui.buttonText}>{title}</Text>
     </Pressable>
   );
 }
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const { colors, ui } = useAppearance();
   return (
     <View style={{ gap: 8 }}>
       <Text style={ui.label}>{label}</Text>
@@ -67,13 +69,15 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
     </View>
   );
 }
-export function Page({ children }: { children: ReactNode }) {
+export function Page({ children, scrollRef }: { children: ReactNode; scrollRef?: Ref<ScrollView> }) {
+  const { ui } = useAppearance();
   return (
     <KeyboardAvoidingView
       style={ui.page}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
+        ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={ui.content}
       >
@@ -91,6 +95,7 @@ export function Empty({
   text: string;
   icon?: keyof typeof Feather.glyphMap;
 }) {
+  const { colors, ui } = useAppearance();
   return (
     <View style={ui.empty}>
       <Feather name={icon} size={30} color={colors.purple} />
@@ -102,6 +107,7 @@ export function Empty({
   );
 }
 export function Notice({ children }: { children: ReactNode }) {
+  const { ui } = useAppearance();
   return (
     <Text accessibilityRole="alert" style={ui.error}>
       {children}

@@ -1,3 +1,4 @@
+import { CREATIVE_SERVICE_OPTIONS } from "./serviceOptions";
 import type { Budget, CompletedJob, Service } from "../types/app";
 
 export const catalogServices: Service[] = [
@@ -142,6 +143,7 @@ export const serviceCategories = [
   "Limpeza",
   "Marcenaria",
   "Refrigeração",
+  ...CREATIVE_SERVICE_OPTIONS,
 ];
 
 export const catalogDictionary = catalogServices.flatMap((service) => [

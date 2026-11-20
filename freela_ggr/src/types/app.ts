@@ -34,11 +34,17 @@ export type Service = {
   category: string;
   provider: string;
   price: string;
+  fixedPriceCents?: number | null;
+  priceNegotiable?: boolean;
   rating: string;
   description: string;
   uf: string;
   city: string;
   neighborhood: string;
+  remote?: boolean;
+  portfolioPaths?: string[];
+  providerPremium?: boolean;
+  unavailable?: boolean;
   trending?: boolean;
   recent?: boolean;
 };
@@ -51,8 +57,12 @@ export type Budget = {
   date: string;
   status: BudgetStatus;
   details?: string | null;
+  agreedPriceCents?: number | null;
+  delivery?: string | null;
   quoteAmount?: number | null;
   quoteMessage?: string | null;
+  createdAt?: string;
+  remote?: boolean;
 };
 
 export type CompletedJob = {

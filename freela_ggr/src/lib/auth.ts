@@ -5,6 +5,7 @@ import { webApi, type ApiError } from "./webApi";
 export type AppUser = { id: string; email?: string; identities?: unknown[] };
 type AuthData = { user: AppUser | null; session?: { user: AppUser } | null };
 type Credentials = { email: string; password: string; options?: { captchaToken?: string; data?: Record<string, unknown> } };
+let authChannel: BroadcastChannel | null = null;
 const listeners = new Set<(event: string, session: { user: AppUser } | null) => void>();
 async function webAuth(action: string, payload = {}): Promise<{ data: AuthData; error: ApiError | null }> {
   try {
@@ -12,11 +13,8 @@ async function webAuth(action: string, payload = {}): Promise<{ data: AuthData; 
     if (["login", "signup", "logout"].includes(action)) {
       const session = data.session ?? null;
       listeners.forEach(listener => listener(action, session));
-      // as outras abas descartam o estado da conta antiga também
-      if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel("auth-changed");
-        channel.postMessage("changed"); channel.close();
-      }
+      // o mesmo canal avisa as outras abas sem recarregar esta aba
+      authChannel?.postMessage("changed");
     }
     return { data, error: null };
   } catch (error) {
@@ -37,8 +35,16 @@ export const auth = {
   onAuthStateChange: (listener: (event: string, session: { user: AppUser } | null) => void) => {
     if (Platform.OS !== "web") return supabase.auth.onAuthStateChange(listener);
     listeners.add(listener);
-    const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("auth-changed") : null;
-    if (channel) channel.onmessage = () => window.location.reload();
-    return { data: { subscription: { unsubscribe: () => { listeners.delete(listener); channel?.close(); } } } };
+    if (!authChannel && typeof BroadcastChannel !== "undefined") {
+      authChannel = new BroadcastChannel("auth-changed");
+      authChannel.onmessage = () => window.location.reload();
+    }
+    return { data: { subscription: { unsubscribe: () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) {
+        authChannel?.close();
+        authChannel = null;
+      }
+    } } } };
   },
 };

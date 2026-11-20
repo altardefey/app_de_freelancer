@@ -3,12 +3,14 @@ const path = require('node:path');
 const http = require('node:http');
 const ts = require('typescript');
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local');
-process.env.APP_ORIGIN = 'http://localhost:3000';
+const port = Number(process.env.PORT ?? 3000);
+process.env.APP_ORIGIN = `http://localhost:${port}`;
 process.env.SUPABASE_URL ??= process.env.EXPO_PUBLIC_SUPABASE_URL;
 process.env.SUPABASE_PUBLISHABLE_KEY ??= process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, filename);
+const { PHOTO_REQUEST_MAX_BYTES } = require('../src/data/photoLimits.ts');
 const handler = require('../api/gateway.ts').default;
 const root = path.resolve(__dirname, '../dist');
 const headers = require('../vercel.json').headers[0].headers;
@@ -19,12 +21,12 @@ http.createServer(async (req, res) => {
       if (header.key === 'Strict-Transport-Security') continue;
       res.setHeader(header.key, header.value.replace('; upgrade-insecure-requests', ''));
     }
-    const pathname = new URL(req.url, 'http://localhost:3000').pathname;
+    const pathname = new URL(req.url, process.env.APP_ORIGIN).pathname;
     if (pathname === '/api/gateway') {
       let body = '';
       for await (const chunk of req) {
         body += chunk;
-        if (Buffer.byteLength(body) > 16384) { res.statusCode = 413; res.end(); return; }
+        if (Buffer.byteLength(body) > PHOTO_REQUEST_MAX_BYTES) { res.statusCode = 413; res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ error: { message: "Envio muito grande." } })); return; }
       }
       req.body = body;
       return await handler(req, res);
@@ -39,4 +41,4 @@ http.createServer(async (req, res) => {
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   } catch { res.statusCode = 500; res.end('Não foi possível atender a solicitação.'); }
-}).listen(3000, '127.0.0.1', () => console.log('Prévia com API local em http://localhost:3000'));
+}).listen(port, '127.0.0.1', () => console.log('Prévia com API local em ' + process.env.APP_ORIGIN));

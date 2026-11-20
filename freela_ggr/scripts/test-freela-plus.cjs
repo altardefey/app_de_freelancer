@@ -70,11 +70,11 @@ const { parseAmount } = require("../src/security/quoteAmount.ts");
   const usage = async () =>
     (await db.query("select public.freela_usage() as usage")).rows[0].usage;
   await act(a);
-  for (let n = 1; n <= 5; n++) await db.exec(input(a, n));
-  assert.equal((await usage()).used, 5);
-  await denies(input(a, 6), "PT402");
+  for (let n = 1; n <= 10; n++) await db.exec(input(a, n));
+  assert.equal((await usage()).used, 10);
+  await denies(input(a, 11), "PT402");
   await denies(input(a, 1), "23505");
-  assert.equal((await usage()).used, 5);
+  assert.equal((await usage()).used, 10);
   await denies("update public.freela_subscriptions set active=true", "42501");
   await denies(
     "insert into public.freela_subscriptions(user_id,active) values('" +
@@ -106,15 +106,15 @@ const { parseAmount } = require("../src/security/quoteAmount.ts");
     [a],
   );
   await act(a);
-  for (let n = 6; n <= 12; n++) await db.exec(input(a, n));
+  await denies(input(a, 11), "PT402");
   assert.equal((await usage()).premium, true);
-  assert.equal((await usage()).used, 12);
+  assert.equal((await usage()).used, 10);
   await db.exec(
     "reset role; update public.freela_subscriptions set expires_at=now()-interval '1 second'",
   );
   await act(a);
   assert.equal((await usage()).premium, false);
-  await denies(input(a, 13), "PT402");
+  await denies(input(a, 11), "PT402");
   // o mês novo renova a franquia sem apagar os orçamentos anteriores
   await db.exec(
     "reset role; update private.quote_usage set month=month-interval '1 month' where user_id='" +
@@ -123,11 +123,11 @@ const { parseAmount } = require("../src/security/quoteAmount.ts");
   );
   await act(a);
   assert.equal((await usage()).used, 0);
-  await db.exec(input(a, 13));
+  await db.exec(input(a, 11));
   assert.equal((await usage()).used, 1);
   assert.equal(
     (await db.query("select * from public.professional_quotes")).rows.length,
-    13,
+    11,
   );
   await act(null);
   await denies("select public.freela_usage()", "42501");
@@ -152,7 +152,7 @@ const { parseAmount } = require("../src/security/quoteAmount.ts");
   );
   await db.close();
   console.log(
-    "PASS: 5/month, sixth blocked, retries, owner isolation, premium, expiry, month rollover, immutable usage, migration replay, currency parsing.",
+    "PASS: 10/month, eleventh blocked, retries, owner isolation, premium, expiry, month rollover, immutable usage, migration replay, currency parsing.",
   );
 })().catch((e) => {
   console.error(e);

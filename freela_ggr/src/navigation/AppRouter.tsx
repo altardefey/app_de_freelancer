@@ -6,12 +6,15 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { ProfessionalHomeScreen } from "../screens/ProfessionalHomeScreen";
 import { RegisterOnboarding } from "../screens/RegisterOnboarding";
 import { Shell } from "../ui/Shell";
-import { ui } from "../ui/design";
+import { HeaderTools, LoadingScreen, useAppearance } from "../ui/Appearance";
 export function AppRouter() {
-  const { role, authScreen, user } = useSession();
+  const { role, authScreen, user, loading } = useSession();
+  const { ui } = useAppearance();
+  if (loading) return <LoadingScreen />;
   if (!role)
     return (
       <SafeAreaView style={ui.page}>
+        <HeaderTools />
         <View
           style={{ flex: 1, display: authScreen === "login" ? "flex" : "none" }}
         >
@@ -27,13 +30,6 @@ export function AppRouter() {
         </View>
       </SafeAreaView>
     );
-  return (
-    <Shell>
-      {role === "cliente" ? (
-        <ClientHomeScreen key={user?.id} />
-      ) : (
-        <ProfessionalHomeScreen key={user?.id} />
-      )}
-    </Shell>
-  );
+  if (role === "cliente") return <ClientHomeScreen key={user?.id} />;
+  return <Shell><ProfessionalHomeScreen key={user?.id} /></Shell>;
 }

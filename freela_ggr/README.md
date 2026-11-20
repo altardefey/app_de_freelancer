@@ -24,11 +24,11 @@ A interface usa verde nas ações, roxo na identidade, superfícies claras e tip
 
 | Recurso | Grátis | Freela+ |
 | --- | --- | --- |
-| Orçamentos criados pelo profissional | 5 por mês | Ilimitados |
+| Orçamentos criados pelo profissional | 10 por mês | 10 por mês |
 | Histórico e compartilhamento | Sim | Sim |
 | Mensalidade prevista no Brasil | R$ 0 | R$ 14,99 |
 
-A franquia grátis renova no primeiro dia de cada mês, no fuso de Brasília (America/Sao_Paulo). Não acumula. Pedidos enviados por clientes não consomem a franquia do profissional.
+A franquia renova no primeiro dia de cada mês, no fuso de Brasília (America/Sao_Paulo). Não acumula. Pedidos enviados por clientes não consomem a franquia do profissional.
 
 O limite é validado no banco, com contador por conta e mês. Envios repetidos do mesmo orçamento usam um identificador para evitar registros e consumo duplicados. O histórico continua disponível após o fim da assinatura.
 
@@ -42,7 +42,7 @@ A integração usa react-native-purchases e react-native-purchases-ui:
 - O SDK identifica a conta pelo UUID do Supabase.
 - O botão de assinatura apresenta o paywall da Offering atual.
 - Compra e restauração consultam o entitlement e pedem confirmação ao servidor.
-- O acesso ilimitado depende do estado verificado no banco, não apenas da resposta do aparelho.
+- O acesso aos benefícios depende do estado verificado no banco, não apenas da resposta do aparelho.
 - A chave Test Store recebida foi configurada em .env.local para iOS e Android. Esse arquivo não é versionado.
 - Chaves test_ são usadas somente em builds de desenvolvimento; não ativam cobrança real.
 - Logs detalhados ficam restritos ao desenvolvimento.
@@ -181,7 +181,7 @@ Siga o padrão já usado no projeto: português, frases curtas, diretas e geralm
 - Revisão dos fluxos de envio, mensagens de erro, teclado, tema e preservação de formulários.
 - Reformulação das telas em React Native.
 - Implementação de criação, histórico, rascunho e compartilhamento de orçamentos.
-- Implementação da franquia de cinco orçamentos mensais e da página Freela+ por R$ 14,99/mês.
+- Implementação da franquia de dez orçamentos mensais e da página Freela+ por R$ 14,99/mês.
 - Integração do RevenueCat, chave Test Store local, entitlement freela e paywall nativo.
 - Verificação da assinatura no servidor, isolamento por conta e proteção contra confirmações antigas.
 - Adição de testes de interface, banco, assinatura e paywall.

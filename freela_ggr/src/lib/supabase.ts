@@ -41,3 +41,9 @@ export const supabase = createClient(supabaseUrl, supabasePublicKey, {
 if (Platform.OS === "web" && typeof window !== "undefined") {
   try { window.localStorage.removeItem(`sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`); } catch { /* o navegador pode bloquear o storage */ }
 }
+
+export function createRecoveryClient() {
+  return createClient(supabaseUrl!, supabasePublicKey!, {
+    auth: { storageKey: "freela-password-recovery", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}

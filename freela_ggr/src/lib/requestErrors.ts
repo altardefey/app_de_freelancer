@@ -15,5 +15,7 @@ export function rateLimitMessage(error: RequestError): string | null {
 }
 
 export function mutationError(error: RequestError): Error {
+  if (error.code === "PT402") return new Error("Você usou os 10 orçamentos deste mês. Aguarde a renovação da franquia.");
+  if ((error.code === "PT400" || error.code === "PT409") && error.message) return new Error(error.message);
   return new Error(rateLimitMessage(error) ?? "Não foi possível salvar. Tente novamente em instantes.");
 }

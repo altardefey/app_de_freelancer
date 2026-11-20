@@ -1,1 +1,1 @@
-export { AccountScreen as default } from "../ui/Shell";
+export { AccountScreen as default } from "../screens/AccountScreen";

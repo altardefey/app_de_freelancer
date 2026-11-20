@@ -1,5 +1,7 @@
 import { normalize } from "../utils/searchTools";
 
+export const CREATIVE_SERVICE_OPTIONS = ["Edição de vídeo", "Design gráfico", "Arte digital", "Arte tradicional"] as const;
+
 export const SERVICE_OPTIONS = [
   "Pintura residencial",
   "Pintura comercial",
@@ -28,7 +30,7 @@ export const SERVICE_OPTIONS = [
   "Motorista particular",
   "Aulas particulares",
   "Informática e suporte técnico",
-  "Design gráfico",
+  ...CREATIVE_SERVICE_OPTIONS,
   "Fotografia",
   "Filmagem de eventos",
   "Cabeleireiro",

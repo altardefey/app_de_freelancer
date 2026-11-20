@@ -8,6 +8,8 @@ import { rateLimitMessage } from "../lib/requestErrors";
 import { supabase } from "../lib/supabase";
 import { emptyLocation, type LocationValue, type Role } from "../types/app";
 
+import { LEGAL_VERSION } from "../data/legalDocuments";
+
 type AuthScreen = "login" | "register";
 
 type RegisterPayload = {
@@ -18,9 +20,14 @@ type RegisterPayload = {
   whatsapp: string;
   services: string[];
   captchaToken?: string;
+  firstName: string;
+  birthDate: string;
+  terms: boolean;
+  privacy: boolean;
 };
 
 type LoginResult = {
+  pendingConfirmation?: boolean;
   success: boolean;
   message?: string;
 };
@@ -38,7 +45,7 @@ type SessionContextValue = {
   user: User | null;
   loading: boolean;
   setLocation: (next: LocationValue) => void;
-  login: (payload: { role: Role; email: string; password: string; captchaToken?: string }) => Promise<LoginResult>;
+  login: (payload: { email: string; password: string; captchaToken?: string }) => Promise<LoginResult>;
   resendConfirmation: (email: string, captchaToken?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   openRegister: () => void;
@@ -216,7 +223,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           message: "Um novo e-mail de confirmação foi enviado.",
         };
       },
-      login: async ({ role: selectedRole, email, password, captchaToken }) => {
+      login: async ({ email, password, captchaToken }) => {
         // o auth valida a senha, depois a gente confere o perfil no banco
         const { data, error } = await auth.signInWithPassword({
           email: email.trim(),
@@ -228,6 +235,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (error.code === "email_not_confirmed") {
             return {
               success: false,
+              pendingConfirmation: true,
               message: "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.",
             };
           }
@@ -259,7 +267,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             message: "Sua conta foi autenticada, mas não foi possível carregar seu perfil. Tente novamente em instantes.",
           };
         }
-        if (!profile) {
+        if (!profile || (profile.role !== "cliente" && profile.role !== "profissional")) {
           await auth.signOut();
           setUser(null);
           setRole(null);
@@ -267,18 +275,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           return {
             success: false,
             message: "Sua conta foi autenticada, mas o perfil do aplicativo não foi encontrado ou não está acessível. Entre em contato com o suporte para regularizar o cadastro.",
-          };
-        }
-
-        // impede entrar escolhendo o papel errado na tela inicial
-        if (profile.role !== selectedRole) {
-          await auth.signOut();
-          setUser(null);
-          setRole(null);
-          setLocation(emptyLocation);
-          return {
-            success: false,
-            message: "Este cadastro não pertence ao perfil selecionado.",
           };
         }
 
@@ -299,6 +295,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       openRegister: () => setAuthScreen("register"),
       closeRegister: () => setAuthScreen("login"),
       completeRegister: async (payload) => {
+        if (!payload.terms || !payload.privacy) return { success: false, message: "Leia e confirme os documentos do cadastro." };
         // manda os dados junto do cadastro para o trigger criar o perfil
         const { data, error } = await auth.signUp({
           email: payload.email.trim(),
@@ -315,6 +312,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               city: payload.location.city,
               whatsapp: payload.whatsapp.replace(/\D/g, ""),
               services: payload.services,
+              first_name: payload.firstName.trim(),
+              birth_date: payload.birthDate,
+              legal_version: LEGAL_VERSION,
             },
           },
         });
